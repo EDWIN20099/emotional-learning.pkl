@@ -1,61 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../utils/emotion_helpers.dart';
+
 class EmotionDetailPage extends StatelessWidget {
   final Map<String, dynamic> emotion;
 
-  const EmotionDetailPage({
-    super.key,
-    required this.emotion,
-  });
-
-  IconData getEmotionIcon(String name) {
-    switch (name.toLowerCase()) {
-      case 'senang':
-        return Icons.sentiment_very_satisfied_rounded;
-      case 'sedih':
-        return Icons.sentiment_dissatisfied_rounded;
-      case 'marah':
-        return Icons.sentiment_very_dissatisfied_rounded;
-      case 'jijik':
-        return Icons.sick_rounded;
-      default:
-        return Icons.emoji_emotions_rounded;
-    }
-  }
-
-  Color getEmotionColor(String name) {
-    switch (name.toLowerCase()) {
-      case 'senang':
-        return const Color(0xFFFFB300);
-      case 'sedih':
-        return const Color(0xFF42A5F5);
-      case 'marah':
-        return const Color(0xFFEF5350);
-      case 'jijik':
-        return const Color(0xFF66BB6A);
-      default:
-        return const Color(0xFFFFA726);
-    }
-  }
-
-  String getHowToHandle(String name) {
-    switch (name.toLowerCase()) {
-      case 'senang':
-        return 'Nikmati perasaan senangmu dan bagikan kebahagiaan kepada orang lain. Kamu juga bisa bersyukur atas hal-hal baik yang terjadi hari ini! ✨';
-
-      case 'sedih':
-        return 'Tidak apa-apa untuk merasa sedih. Cobalah bercerita kepada orang yang kamu percaya, menarik napas dengan tenang, atau melakukan kegiatan yang kamu sukai. 💙';
-
-      case 'marah':
-        return 'Saat marah, coba berhenti sejenak dan tarik napas dalam-dalam. Beri dirimu waktu untuk tenang sebelum berbicara atau mengambil keputusan. 🌟';
-
-      case 'jijik':
-        return 'Jika merasa jijik atau tidak nyaman, menjauhlah dari hal yang membuatmu tidak nyaman. Kamu juga bisa mengatakan perasaanmu dengan cara yang baik. 🌱';
-
-      default:
-        return 'Kenali perasaanmu dan cobalah mencari cara yang sehat untuk mengelolanya. 🚀';
-    }
-  }
+  const EmotionDetailPage({super.key, required this.emotion});
 
   @override
   Widget build(BuildContext context) {
@@ -65,12 +15,17 @@ class EmotionDetailPage extends StatelessWidget {
         emotion['description']?.toString() ??
         'Belum ada deskripsi untuk emosi ini.';
 
-    final icon = getEmotionIcon(name);
-    final color = getEmotionColor(name);
-    final howToHandle = getHowToHandle(name);
+    // Icon, warna, dan tips sekarang diambil langsung dari data
+    // emosi yang datang dari Supabase (kolom icon_name, color_hex,
+    // how_to_handle), bukan ditebak dari nama emosinya lagi.
+    final icon = EmotionHelpers.iconFromEmotion(emotion);
+    final color = EmotionHelpers.colorFromEmotion(emotion);
+    final howToHandle = EmotionHelpers.howToHandleFromEmotion(emotion);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFFFDF5), // Warna latar krem hangat khas TK
+      backgroundColor: const Color(
+        0xFFFFFDF5,
+      ), // Warna latar krem hangat khas TK
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -80,10 +35,7 @@ class EmotionDetailPage extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: const Color(0xFFDCE8F5),
-                width: 1.5,
-              ),
+              border: Border.all(color: const Color(0xFFDCE8F5), width: 1.5),
             ),
             child: IconButton(
               icon: const Icon(
@@ -128,11 +80,7 @@ class EmotionDetailPage extends StatelessWidget {
                   ),
                 ],
               ),
-              child: Icon(
-                icon,
-                size: 65,
-                color: color,
-              ),
+              child: Icon(icon, size: 65, color: color),
             ),
 
             const SizedBox(height: 20),
@@ -155,10 +103,7 @@ class EmotionDetailPage extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(24),
-                border: Border.all(
-                  color: const Color(0xFFDCE8F5),
-                  width: 2,
-                ),
+                border: Border.all(color: const Color(0xFFDCE8F5), width: 2),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.03),
@@ -203,10 +148,7 @@ class EmotionDetailPage extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(24),
-                border: Border.all(
-                  color: const Color(0xFFDCE8F5),
-                  width: 2,
-                ),
+                border: Border.all(color: const Color(0xFFDCE8F5), width: 2),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.03),

@@ -1,63 +1,32 @@
 import 'package:flutter/material.dart';
 import 'quiz_page.dart';
+import '../utils/emotion_helpers.dart';
 
 class StoryDetailPage extends StatelessWidget {
   final Map<String, dynamic> story;
 
-  const StoryDetailPage({
-    super.key,
-    required this.story,
-  });
-
-  IconData getEmotionIcon(String name) {
-    switch (name.toLowerCase()) {
-      case 'senang':
-        return Icons.sentiment_very_satisfied_rounded;
-      case 'sedih':
-        return Icons.sentiment_dissatisfied_rounded;
-      case 'marah':
-        return Icons.sentiment_very_dissatisfied_rounded;
-      case 'jijik':
-        return Icons.sick_rounded;
-      default:
-        return Icons.emoji_emotions_rounded;
-    }
-  }
-
-  Color getEmotionColor(String name) {
-    switch (name.toLowerCase()) {
-      case 'senang':
-        return const Color(0xFFFFB300);
-      case 'sedih':
-        return const Color(0xFF42A5F5);
-      case 'marah':
-        return const Color(0xFFEF5350);
-      case 'jijik':
-        return const Color(0xFF66BB6A);
-      default:
-        return const Color(0xFFFFA726);
-    }
-  }
+  const StoryDetailPage({super.key, required this.story});
 
   @override
   Widget build(BuildContext context) {
-    final emotion = story['emotions'];
+    final emotionRaw = story['emotions'];
 
-    final emotionName = emotion is Map
-        ? emotion['name']?.toString() ?? 'Emosi'
-        : 'Emosi';
+    final emotion = emotionRaw is Map
+        ? Map<String, dynamic>.from(emotionRaw)
+        : <String, dynamic>{};
 
-    final title =
-        story['title']?.toString() ?? 'Tanpa Judul';
+    final emotionName = emotion['name']?.toString() ?? 'Emosi';
 
-    final content =
-        story['content']?.toString() ?? '';
+    final title = story['title']?.toString() ?? 'Tanpa Judul';
 
-    final emotionColor =
-        getEmotionColor(emotionName);
+    final content = story['content']?.toString() ?? '';
+
+    final emotionColor = EmotionHelpers.colorFromEmotion(emotion);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFFFDF5), // Warna latar krem hangat khas TK
+      backgroundColor: const Color(
+        0xFFFFFDF5,
+      ), // Warna latar krem hangat khas TK
 
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -68,10 +37,7 @@ class StoryDetailPage extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: const Color(0xFFDCE8F5),
-                width: 1.5,
-              ),
+              border: Border.all(color: const Color(0xFFDCE8F5), width: 1.5),
             ),
             child: IconButton(
               icon: const Icon(
@@ -94,29 +60,19 @@ class StoryDetailPage extends StatelessWidget {
       ),
 
       body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(
-          20,
-          10,
-          20,
-          32,
-        ),
+        padding: const EdgeInsets.fromLTRB(20, 10, 20, 32),
         child: Column(
-          crossAxisAlignment:
-              CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // =========================
             // HEADER CERITA
             // =========================
-
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: emotionColor.withValues(
-                  alpha: 0.15,
-                ),
-                borderRadius:
-                    BorderRadius.circular(28),
+                color: emotionColor.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(28),
                 border: Border.all(
                   color: emotionColor.withValues(alpha: 0.3),
                   width: 2,
@@ -139,9 +95,7 @@ class StoryDetailPage extends StatelessWidget {
                       ],
                     ),
                     child: Icon(
-                      getEmotionIcon(
-                        emotionName,
-                      ),
+                      EmotionHelpers.iconFromEmotion(emotion),
                       size: 42,
                       color: emotionColor,
                     ),
@@ -150,22 +104,19 @@ class StoryDetailPage extends StatelessWidget {
                   const SizedBox(height: 16),
 
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(
+                    padding: const EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
                       color: emotionColor,
-                      borderRadius:
-                          BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
                       emotionName,
                       style: const TextStyle(
                         color: Colors.white,
-                        fontWeight:
-                            FontWeight.w900,
+                        fontWeight: FontWeight.w900,
                         fontSize: 13,
                       ),
                     ),
@@ -179,8 +130,7 @@ class StoryDetailPage extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 24,
                       height: 1.3,
-                      fontWeight:
-                          FontWeight.w900,
+                      fontWeight: FontWeight.w900,
                       color: Color(0xFF1B3B6F),
                     ),
                   ),
@@ -193,7 +143,6 @@ class StoryDetailPage extends StatelessWidget {
             // =========================
             // ISI CERITA
             // =========================
-
             const Text(
               'Baca ceritanya 📖',
               style: TextStyle(
@@ -210,12 +159,8 @@ class StoryDetailPage extends StatelessWidget {
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius:
-                    BorderRadius.circular(24),
-                border: Border.all(
-                  color: const Color(0xFFDCE8F5),
-                  width: 2,
-                ),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: const Color(0xFFDCE8F5), width: 2),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.03),
@@ -240,13 +185,11 @@ class StoryDetailPage extends StatelessWidget {
             // =========================
             // INFO QUIZ
             // =========================
-
             Container(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
                 color: const Color(0xFFFFE066).withValues(alpha: 0.3),
-                borderRadius:
-                    BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(20),
                 border: Border.all(
                   color: const Color(0xFFFFC928).withValues(alpha: 0.5),
                   width: 1.5,
@@ -254,10 +197,7 @@ class StoryDetailPage extends StatelessWidget {
               ),
               child: const Row(
                 children: [
-                  Text(
-                    '💡',
-                    style: TextStyle(fontSize: 28),
-                  ),
+                  Text('💡', style: TextStyle(fontSize: 28)),
                   SizedBox(width: 14),
                   Expanded(
                     child: Text(
@@ -265,8 +205,7 @@ class StoryDetailPage extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 13,
                         height: 1.4,
-                        fontWeight:
-                            FontWeight.w900,
+                        fontWeight: FontWeight.w900,
                         color: Color(0xFF855D00),
                       ),
                     ),
@@ -280,42 +219,30 @@ class StoryDetailPage extends StatelessWidget {
             // =========================
             // TOMBOL QUIZ
             // =========================
-
             SizedBox(
               width: double.infinity,
               height: 56,
               child: ElevatedButton(
                 onPressed: () async {
-                  final result =
-                      await Navigator.push(
+                  final result = await Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) =>
-                          QuizPage(
-                        story: story,
-                      ),
+                      builder: (context) => QuizPage(story: story),
                     ),
                   );
 
                   // Quiz mengembalikan true
                   // jika user berhasil/lulus.
-                  if (result == true &&
-                      context.mounted) {
-                    Navigator.pop(
-                      context,
-                      true,
-                    );
+                  if (result == true && context.mounted) {
+                    Navigator.pop(context, true);
                   }
                 },
-                style:
-                    ElevatedButton.styleFrom(
+                style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFFFC928),
                   foregroundColor: const Color(0xFF1B3B6F),
                   elevation: 0,
-                  shape:
-                      RoundedRectangleBorder(
-                    borderRadius:
-                        BorderRadius.circular(20),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
                   ),
                 ),
                 child: const Row(
@@ -325,8 +252,7 @@ class StoryDetailPage extends StatelessWidget {
                       'Lanjut ke Quiz 🧩',
                       style: TextStyle(
                         fontSize: 17,
-                        fontWeight:
-                            FontWeight.w900,
+                        fontWeight: FontWeight.w900,
                       ),
                     ),
                   ],

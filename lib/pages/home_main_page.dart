@@ -33,6 +33,19 @@ class _HomeMainPageState extends State<HomeMainPage>
 
   late AnimationController _sparkleController;
 
+  // =========================================================
+  // USER DATA
+  // =========================================================
+
+  String userName = 'Teman';
+
+  // =========================================================
+  // MENU ITEMS (DINAMIS DARI SUPABASE)
+  // =========================================================
+
+  List<Map<String, dynamic>> menuItems = [];
+  bool isLoadingMenu = true;
+
   @override
   void initState() {
     super.initState();
@@ -41,6 +54,94 @@ class _HomeMainPageState extends State<HomeMainPage>
       vsync: this,
       duration: const Duration(seconds: 3),
     )..repeat();
+
+    loadUserName();
+    loadMenuItems();
+  }
+
+  void loadUserName() {
+    final user = Supabase.instance.client.auth.currentUser;
+    final name = user?.userMetadata?['name']?.toString();
+
+    if (name != null && name.trim().isNotEmpty) {
+      setState(() {
+        userName = name;
+      });
+    }
+  }
+
+  Future<void> loadMenuItems() async {
+    try {
+      final data = await Supabase.instance.client
+          .from('menu_items')
+          .select()
+          .eq('is_active', true)
+          .order('order_index');
+
+      if (!mounted) return;
+
+      setState(() {
+        menuItems = List<Map<String, dynamic>>.from(data);
+        isLoadingMenu = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        isLoadingMenu = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal memuat menu: $e'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  // Ubah string hex ('FFFF9364') dari Supabase jadi Color Flutter.
+  Color _colorFromHex(String? hex) {
+    if (hex == null || hex.isEmpty) return orangeColor;
+
+    final cleaned = hex.replaceAll('#', '');
+    final value = int.tryParse(cleaned, radix: 16);
+
+    if (value == null) return orangeColor;
+
+    return Color(value);
+  }
+
+  // route_key dari Supabase -> halaman Flutter yang sesuai.
+  // Kalau nanti ada route_key baru yang belum ada di sini,
+  // tinggal tambah 1 case baru + bikin halamannya.
+  Widget? _pageForRouteKey(String routeKey) {
+    switch (routeKey) {
+      case 'story':
+        return const EmotionStoryPage();
+      case 'gallery':
+        return const EmotionGalleryPage();
+      case 'garden':
+        return const GardenPage();
+      default:
+        return null;
+    }
+  }
+
+  void _openMenuItem(BuildContext context, String routeKey) {
+    final page = _pageForRouteKey(routeKey);
+
+    if (page == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Fitur ini belum tersedia 🚧'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    Navigator.push(context, MaterialPageRoute(builder: (context) => page));
   }
 
   @override
@@ -59,11 +160,7 @@ class _HomeMainPageState extends State<HomeMainPage>
 
       if (!mounted) return;
 
-      Navigator.pushNamedAndRemoveUntil(
-        context,
-        '/login',
-        (route) => false,
-      );
+      Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
     } catch (e) {
       if (!mounted) return;
 
@@ -86,18 +183,11 @@ class _HomeMainPageState extends State<HomeMainPage>
           ),
           title: const Text(
             'Keluar dari akun?',
-            style: TextStyle(
-              fontWeight: FontWeight.w900,
-              color: navyColor,
-            ),
+            style: TextStyle(fontWeight: FontWeight.w900, color: navyColor),
           ),
           content: const Text(
             'Kamu yakin ingin keluar dari Emotional Learning?',
-            style: TextStyle(
-              fontSize: 14,
-              color: textSoft,
-              height: 1.4,
-            ),
+            style: TextStyle(fontSize: 14, color: textSoft, height: 1.4),
           ),
           actions: [
             TextButton(
@@ -106,20 +196,14 @@ class _HomeMainPageState extends State<HomeMainPage>
               },
               child: const Text(
                 'Batal',
-                style: TextStyle(
-                  fontWeight: FontWeight.w700,
-                  color: textSoft,
-                ),
+                style: TextStyle(fontWeight: FontWeight.w700, color: textSoft),
               ),
             ),
             ElevatedButton.icon(
               onPressed: () {
                 Navigator.pop(dialogContext, true);
               },
-              icon: const Icon(
-                Icons.logout_rounded,
-                size: 18,
-              ),
+              icon: const Icon(Icons.logout_rounded, size: 18),
               label: const Text('Logout'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: orangeColor,
@@ -154,7 +238,6 @@ class _HomeMainPageState extends State<HomeMainPage>
             // =====================================================
             // BACKGROUND DECORATIONS
             // =====================================================
-
             Positioned(
               top: -35,
               right: -35,
@@ -185,20 +268,13 @@ class _HomeMainPageState extends State<HomeMainPage>
             // =====================================================
             // MAIN CONTENT
             // =====================================================
-
             ListView(
               physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(
-                20,
-                18,
-                20,
-                35,
-              ),
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 35),
               children: [
                 // =================================================
                 // HEADER
                 // =================================================
-
                 Row(
                   children: [
                     Container(
@@ -206,18 +282,12 @@ class _HomeMainPageState extends State<HomeMainPage>
                       height: 58,
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
-                          colors: [
-                            Color(0xFFFFE77A),
-                            Color(0xFFFFC83D),
-                          ],
+                          colors: [Color(0xFFFFE77A), Color(0xFFFFC83D)],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: Colors.white,
-                          width: 3,
-                        ),
+                        border: Border.all(color: Colors.white, width: 3),
                         boxShadow: [
                           BoxShadow(
                             color: yellowColor.withValues(alpha: 0.28),
@@ -227,12 +297,7 @@ class _HomeMainPageState extends State<HomeMainPage>
                         ],
                       ),
                       child: const Center(
-                        child: Text(
-                          '🧸',
-                          style: TextStyle(
-                            fontSize: 30,
-                          ),
-                        ),
+                        child: Text('🧸', style: TextStyle(fontSize: 30)),
                       ),
                     ),
 
@@ -266,7 +331,6 @@ class _HomeMainPageState extends State<HomeMainPage>
                     // =================================================
                     // LOGOUT BUTTON
                     // =================================================
-
                     Material(
                       color: Colors.transparent,
                       child: InkWell(
@@ -284,9 +348,7 @@ class _HomeMainPageState extends State<HomeMainPage>
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: orangeColor.withValues(
-                                  alpha: 0.15,
-                                ),
+                                color: orangeColor.withValues(alpha: 0.15),
                                 blurRadius: 12,
                                 offset: const Offset(0, 5),
                               ),
@@ -308,29 +370,20 @@ class _HomeMainPageState extends State<HomeMainPage>
                 // =================================================
                 // HERO / MOOD ADVENTURE
                 // =================================================
-
                 Container(
                   height: 205,
                   clipBehavior: Clip.antiAlias,
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
-                      colors: [
-                        Color(0xFFFFE98A),
-                        Color(0xFFFFC85A),
-                      ],
+                      colors: [Color(0xFFFFE98A), Color(0xFFFFC85A)],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
                     borderRadius: BorderRadius.circular(32),
-                    border: Border.all(
-                      color: Colors.white,
-                      width: 3,
-                    ),
+                    border: Border.all(color: Colors.white, width: 3),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFFFFC83D).withValues(
-                          alpha: 0.25,
-                        ),
+                        color: const Color(0xFFFFC83D).withValues(alpha: 0.25),
                         blurRadius: 20,
                         offset: const Offset(0, 9),
                       ),
@@ -359,7 +412,6 @@ class _HomeMainPageState extends State<HomeMainPage>
                       // =================================================
                       // ANIMATED SPARKLES AROUND LION
                       // =================================================
-
                       Positioned(
                         top: 17,
                         right: 122,
@@ -411,20 +463,13 @@ class _HomeMainPageState extends State<HomeMainPage>
                       ),
 
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(
-                          22,
-                          20,
-                          16,
-                          18,
-                        ),
+                        padding: const EdgeInsets.fromLTRB(22, 20, 16, 18),
                         child: Row(
                           children: [
                             Expanded(
                               child: Column(
-                                crossAxisAlignment:
-                                    CrossAxisAlignment.start,
-                                mainAxisAlignment:
-                                    MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Container(
                                     padding: const EdgeInsets.symmetric(
@@ -435,12 +480,11 @@ class _HomeMainPageState extends State<HomeMainPage>
                                       color: Colors.white.withValues(
                                         alpha: 0.65,
                                       ),
-                                      borderRadius:
-                                          BorderRadius.circular(30),
+                                      borderRadius: BorderRadius.circular(30),
                                     ),
-                                    child: const Text(
-                                      '👋 Hai, Teman!',
-                                      style: TextStyle(
+                                    child: Text(
+                                      '👋 Hai, $userName!',
+                                      style: const TextStyle(
                                         fontSize: 12,
                                         fontWeight: FontWeight.w900,
                                         color: Color(0xFF805D00),
@@ -478,7 +522,6 @@ class _HomeMainPageState extends State<HomeMainPage>
                             // =================================================
                             // LION
                             // =================================================
-
                             SizedBox(
                               width: 108,
                               height: 125,
@@ -490,13 +533,12 @@ class _HomeMainPageState extends State<HomeMainPage>
                                     builder: (context, child) {
                                       final value =
                                           (math.sin(
-                                                    _sparkleController
-                                                        .value *
-                                                        math.pi *
-                                                        2,
-                                                  ) +
-                                                  1) /
-                                              2;
+                                                _sparkleController.value *
+                                                    math.pi *
+                                                    2,
+                                              ) +
+                                              1) /
+                                          2;
 
                                       return Container(
                                         width: 91 + (value * 10),
@@ -504,8 +546,7 @@ class _HomeMainPageState extends State<HomeMainPage>
                                         decoration: BoxDecoration(
                                           shape: BoxShape.circle,
                                           color: Colors.white.withValues(
-                                            alpha:
-                                                0.14 + (value * 0.10),
+                                            alpha: 0.14 + (value * 0.10),
                                           ),
                                         ),
                                       );
@@ -537,9 +578,7 @@ class _HomeMainPageState extends State<HomeMainPage>
                                     child: const Center(
                                       child: Text(
                                         '🦁',
-                                        style: TextStyle(
-                                          fontSize: 56,
-                                        ),
+                                        style: TextStyle(fontSize: 56),
                                       ),
                                     ),
                                   ),
@@ -558,7 +597,6 @@ class _HomeMainPageState extends State<HomeMainPage>
                 // =================================================
                 // SECTION HEADER
                 // =================================================
-
                 Row(
                   children: [
                     Container(
@@ -580,10 +618,7 @@ class _HomeMainPageState extends State<HomeMainPage>
                         ),
                       ),
                     ),
-                    _floatingEmoji(
-                      emoji: '🚀',
-                      size: 24,
-                    ),
+                    _floatingEmoji(emoji: '🚀', size: 24),
                   ],
                 ),
 
@@ -604,100 +639,70 @@ class _HomeMainPageState extends State<HomeMainPage>
                 const SizedBox(height: 18),
 
                 // =================================================
-                // CERITA
+                // MENU (DINAMIS DARI SUPABASE)
                 // =================================================
+                if (isLoadingMenu)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 30),
+                    child: Center(
+                      child: CircularProgressIndicator(color: orangeColor),
+                    ),
+                  )
+                else if (menuItems.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 20),
+                    child: Center(
+                      child: Text(
+                        'Belum ada menu tersedia.',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: textSoft,
+                        ),
+                      ),
+                    ),
+                  )
+                else
+                  ...menuItems.asMap().entries.map((entry) {
+                    final index = entry.key;
+                    final item = entry.value;
 
-                _menuCard(
-                  context,
-                  emoji: '📖',
-                  title: 'Cerita Seru',
-                  subtitle: 'Jelajahi cerita dan\njawab kuisnya!',
-                  color: orangeColor,
-                  lightColor: const Color(0xFFFFE5D7),
-                  badge: 'PETUALANGAN',
-                  sparkleColor: const Color(0xFFFFB07C),
-                  delay: 0.0,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            const EmotionStoryPage(),
+                    final routeKey = item['route_key']?.toString() ?? '';
+
+                    final color = _colorFromHex(item['color_hex']?.toString());
+                    final lightColor = _colorFromHex(
+                      item['light_color_hex']?.toString(),
+                    );
+                    final sparkleColor = _colorFromHex(
+                      item['sparkle_color_hex']?.toString(),
+                    );
+
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 15),
+                      child: _menuCard(
+                        context,
+                        emoji: item['emoji']?.toString() ?? '✨',
+                        title: item['title']?.toString() ?? '',
+                        subtitle: item['subtitle']?.toString() ?? '',
+                        color: color,
+                        lightColor: lightColor,
+                        badge: item['badge']?.toString() ?? '',
+                        sparkleColor: sparkleColor,
+                        delay: index * 0.45,
+                        onTap: () => _openMenuItem(context, routeKey),
                       ),
                     );
-                  },
-                ),
-
-                const SizedBox(height: 15),
-
-                // =================================================
-                // GALERI EMOSI
-                // =================================================
-
-                _menuCard(
-                  context,
-                  emoji: '🌈',
-                  title: 'Galeri Emosi',
-                  subtitle:
-                      'Kenali perasaan dan\ncara menghadapinya!',
-                  color: blueColor,
-                  lightColor: const Color(0xFFDDF4FF),
-                  badge: 'KENALI EMOSI',
-                  sparkleColor: const Color(0xFF9BDFFF),
-                  delay: 0.45,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            const EmotionGalleryPage(),
-                      ),
-                    );
-                  },
-                ),
-
-                const SizedBox(height: 15),
-
-                // =================================================
-                // GARDEN
-                // =================================================
-
-                _menuCard(
-                  context,
-                  emoji: '🌻',
-                  title: 'Taman Emosi',
-                  subtitle:
-                      'Kumpulkan bunga dan\nlihat hadiahmu!',
-                  color: greenColor,
-                  lightColor: const Color(0xFFDDF7E9),
-                  badge: 'KOLEKSI HADIAH',
-                  sparkleColor: const Color(0xFFA6E8BE),
-                  delay: 0.9,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            const GardenPage(),
-                      ),
-                    );
-                  },
-                ),
+                  }),
 
                 const SizedBox(height: 22),
 
                 // =================================================
                 // MOTIVATION CARD
                 // =================================================
-
                 Container(
                   padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
-                      colors: [
-                        Color(0xFFFFF0F5),
-                        Color(0xFFFFF8FB),
-                      ],
+                      colors: [Color(0xFFFFF0F5), Color(0xFFFFF8FB)],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
@@ -731,12 +736,7 @@ class _HomeMainPageState extends State<HomeMainPage>
                           ],
                         ),
                         child: const Center(
-                          child: Text(
-                            '💖',
-                            style: TextStyle(
-                              fontSize: 29,
-                            ),
-                          ),
+                          child: Text('💖', style: TextStyle(fontSize: 29)),
                         ),
                       ),
 
@@ -744,8 +744,7 @@ class _HomeMainPageState extends State<HomeMainPage>
 
                       const Expanded(
                         child: Column(
-                          crossAxisAlignment:
-                              CrossAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               'Pesan Hari Ini ✨',
@@ -778,14 +777,10 @@ class _HomeMainPageState extends State<HomeMainPage>
                 // =================================================
                 // FOOTER
                 // =================================================
-
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: const [
-                    Text(
-                      '🌱',
-                      style: TextStyle(fontSize: 18),
-                    ),
+                    Text('🌱', style: TextStyle(fontSize: 18)),
                     SizedBox(width: 7),
                     Text(
                       'Terus belajar mengenal dirimu!',
@@ -796,10 +791,7 @@ class _HomeMainPageState extends State<HomeMainPage>
                       ),
                     ),
                     SizedBox(width: 7),
-                    Text(
-                      '🌱',
-                      style: TextStyle(fontSize: 18),
-                    ),
+                    Text('🌱', style: TextStyle(fontSize: 18)),
                   ],
                 ),
               ],
@@ -822,24 +814,17 @@ class _HomeMainPageState extends State<HomeMainPage>
     return AnimatedBuilder(
       animation: _sparkleController,
       builder: (context, child) {
-        double progress =
-            (_sparkleController.value + delay) % 1.0;
+        double progress = (_sparkleController.value + delay) % 1.0;
 
-        double opacity =
-            (math.sin(progress * math.pi * 2) + 1) / 2;
+        double opacity = (math.sin(progress * math.pi * 2) + 1) / 2;
 
-        double scale =
-            0.65 + (opacity * 0.55);
+        double scale = 0.65 + (opacity * 0.55);
 
         return Opacity(
           opacity: 0.25 + (opacity * 0.75),
           child: Transform.scale(
             scale: scale,
-            child: Icon(
-              Icons.auto_awesome_rounded,
-              size: size,
-              color: color,
-            ),
+            child: Icon(Icons.auto_awesome_rounded, size: size, color: color),
           ),
         );
       },
@@ -850,29 +835,15 @@ class _HomeMainPageState extends State<HomeMainPage>
   // FLOATING EMOJI
   // =========================================================
 
-  Widget _floatingEmoji({
-    required String emoji,
-    required double size,
-  }) {
+  Widget _floatingEmoji({required String emoji, required double size}) {
     return AnimatedBuilder(
       animation: _sparkleController,
       builder: (context, child) {
-        final movement =
-            math.sin(
-                  _sparkleController.value *
-                      math.pi *
-                      2,
-                ) *
-                3;
+        final movement = math.sin(_sparkleController.value * math.pi * 2) * 3;
 
         return Transform.translate(
           offset: Offset(0, movement),
-          child: Text(
-            emoji,
-            style: TextStyle(
-              fontSize: size,
-            ),
-          ),
+          child: Text(emoji, style: TextStyle(fontSize: size)),
         );
       },
     );
@@ -909,10 +880,7 @@ class _HomeMainPageState extends State<HomeMainPage>
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(27),
-                border: Border.all(
-                  color: lightColor,
-                  width: 2,
-                ),
+                border: Border.all(color: lightColor, width: 2),
                 boxShadow: [
                   BoxShadow(
                     color: color.withValues(alpha: 0.12),
@@ -926,7 +894,6 @@ class _HomeMainPageState extends State<HomeMainPage>
                   // =================================================
                   // ICON AREA
                   // =================================================
-
                   Stack(
                     clipBehavior: Clip.none,
                     children: [
@@ -935,8 +902,7 @@ class _HomeMainPageState extends State<HomeMainPage>
                         height: 76,
                         decoration: BoxDecoration(
                           color: lightColor,
-                          borderRadius:
-                              BorderRadius.circular(23),
+                          borderRadius: BorderRadius.circular(23),
                         ),
                         child: Center(
                           child: Container(
@@ -944,13 +910,10 @@ class _HomeMainPageState extends State<HomeMainPage>
                             height: 62,
                             decoration: BoxDecoration(
                               color: color,
-                              borderRadius:
-                                  BorderRadius.circular(19),
+                              borderRadius: BorderRadius.circular(19),
                               boxShadow: [
                                 BoxShadow(
-                                  color: color.withValues(
-                                    alpha: 0.28,
-                                  ),
+                                  color: color.withValues(alpha: 0.28),
                                   blurRadius: 9,
                                   offset: const Offset(0, 5),
                                 ),
@@ -959,9 +922,7 @@ class _HomeMainPageState extends State<HomeMainPage>
                             child: Center(
                               child: Text(
                                 emoji,
-                                style: const TextStyle(
-                                  fontSize: 31,
-                                ),
+                                style: const TextStyle(fontSize: 31),
                               ),
                             ),
                           ),
@@ -995,11 +956,9 @@ class _HomeMainPageState extends State<HomeMainPage>
                   // =================================================
                   // TEXT
                   // =================================================
-
                   Expanded(
                     child: Column(
-                      crossAxisAlignment:
-                          CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Container(
                           padding: const EdgeInsets.symmetric(
@@ -1008,8 +967,7 @@ class _HomeMainPageState extends State<HomeMainPage>
                           ),
                           decoration: BoxDecoration(
                             color: lightColor,
-                            borderRadius:
-                                BorderRadius.circular(20),
+                            borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
                             badge,
@@ -1053,7 +1011,6 @@ class _HomeMainPageState extends State<HomeMainPage>
                   // =================================================
                   // ARROW
                   // =================================================
-
                   Container(
                     width: 39,
                     height: 39,
@@ -1087,17 +1044,11 @@ class _HomeMainPageState extends State<HomeMainPage>
   // DECORATIVE CIRCLE
   // =========================================================
 
-  Widget _decorativeCircle({
-    required double size,
-    required Color color,
-  }) {
+  Widget _decorativeCircle({required double size, required Color color}) {
     return Container(
       width: size,
       height: size,
-      decoration: BoxDecoration(
-        color: color,
-        shape: BoxShape.circle,
-      ),
+      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
     );
   }
 }

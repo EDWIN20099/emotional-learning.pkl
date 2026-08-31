@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'quiz_page.dart';
+import '../utils/responsive.dart';
 
 class StoryReaderPage extends StatefulWidget {
   final Map<String, dynamic> story;
@@ -105,11 +106,15 @@ class _StoryReaderPageState extends State<StoryReaderPage> {
   // MASUK KE QUIZ
   // ============================================================
 
-  void goToQuiz() {
-    Navigator.pushReplacement(
+  Future<void> goToQuiz() async {
+    final result = await Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => QuizPage(story: widget.story)),
     );
+
+    if (!mounted) return;
+
+    Navigator.pop(context, result);
   }
 
   // ============================================================
@@ -344,7 +349,11 @@ class _StoryReaderPageState extends State<StoryReaderPage> {
       backgroundColor: Colors.black,
 
       body: SizedBox.expand(
-        child: Stack(
+        child: Builder(
+          builder: (context) {
+            final r = Responsive(context);
+
+            return Stack(
           fit: StackFit.expand,
           children: [
             // ========================================================
@@ -473,8 +482,8 @@ class _StoryReaderPageState extends State<StoryReaderPage> {
             // 4. SUBTITLE / TEKS CERITA
             // ========================================================
             Positioned(
-              left: 110,
-              right: 110,
+              left: r.w(90),
+              right: r.w(90),
               bottom: 18,
               child: Column(
                 children: [
@@ -561,7 +570,7 @@ class _StoryReaderPageState extends State<StoryReaderPage> {
             // 5. TOMBOL PREVIOUS
             // ========================================================
             Positioned(
-              left: 20,
+              left: r.w(20),
               top: 0,
               bottom: 0,
               child: Center(
@@ -574,8 +583,8 @@ class _StoryReaderPageState extends State<StoryReaderPage> {
                       duration: const Duration(milliseconds: 200),
                       opacity: currentPage > 0 ? 1.0 : 0.35,
                       child: Container(
-                        width: 60,
-                        height: 60,
+                        width: r.w(56),
+                        height: r.w(56),
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           color: Colors.black.withValues(alpha: 0.60),
@@ -599,7 +608,7 @@ class _StoryReaderPageState extends State<StoryReaderPage> {
             // 6. TOMBOL NEXT
             // ========================================================
             Positioned(
-              right: 20,
+              right: r.w(20),
               top: 0,
               bottom: 0,
               child: Center(
@@ -609,8 +618,8 @@ class _StoryReaderPageState extends State<StoryReaderPage> {
                     onTap: _nextPage,
                     borderRadius: BorderRadius.circular(50),
                     child: Container(
-                      width: 60,
-                      height: 60,
+                      width: r.w(56),
+                      height: r.w(56),
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: const Color(0xFFFFD15C),
@@ -637,6 +646,8 @@ class _StoryReaderPageState extends State<StoryReaderPage> {
               ),
             ),
           ],
+        );
+          },
         ),
       ),
     );

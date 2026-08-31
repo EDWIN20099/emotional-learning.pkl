@@ -8,13 +8,33 @@ class RegisterPage extends StatefulWidget {
   State<RegisterPage> createState() => _RegisterPageState();
 }
 
-class _RegisterPageState extends State<RegisterPage> {
+class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderStateMixin {
   final nameController = TextEditingController();
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
 
   bool isLoading = false;
   bool obscurePassword = true;
+  bool _isRegisterPressed = false;
+
+  late AnimationController _entranceController;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _entranceController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+    _scaleAnimation = Tween<double>(begin: 0.85, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _entranceController,
+        curve: Curves.easeOutBack,
+      ),
+    );
+    _entranceController.forward();
+  }
 
   Future<void> register() async {
     final name = nameController.text.trim();
@@ -126,6 +146,7 @@ class _RegisterPageState extends State<RegisterPage> {
     nameController.dispose();
     emailController.dispose();
     passwordController.dispose();
+    _entranceController.dispose();
     super.dispose();
   }
 
@@ -139,16 +160,16 @@ class _RegisterPageState extends State<RegisterPage> {
       labelStyle: const TextStyle(
         fontSize: 13,
         fontWeight: FontWeight.w700,
-        color: Color(0xFF98A8C7),
+        color: Color(0xFF7183A0),
       ),
       floatingLabelStyle: const TextStyle(
         fontSize: 13,
         fontWeight: FontWeight.w800,
-        color: Color(0xFFFF8E42),
+        color: Color(0xFFFF9364),
       ),
       prefixIcon: Icon(
         icon,
-        color: const Color(0xFFFF8E42),
+        color: const Color(0xFFFF9364),
         size: 21,
       ),
       suffixIcon: suffixIcon,
@@ -172,7 +193,7 @@ class _RegisterPageState extends State<RegisterPage> {
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(18),
         borderSide: const BorderSide(
-          color: Color(0xFFFF8E42),
+          color: Color(0xFFFF9364),
           width: 2,
         ),
       ),
@@ -189,7 +210,7 @@ class _RegisterPageState extends State<RegisterPage> {
             width: 230,
             height: 230,
             decoration: BoxDecoration(
-              color: const Color(0xFFFFD966).withValues(alpha: 0.40),
+              color: const Color(0xFFFFD54F).withValues(alpha: 0.30),
               shape: BoxShape.circle,
             ),
           ),
@@ -201,7 +222,7 @@ class _RegisterPageState extends State<RegisterPage> {
             width: 140,
             height: 140,
             decoration: BoxDecoration(
-              color: const Color(0xFFA8E6CF).withValues(alpha: 0.50),
+              color: const Color(0xFF66D39A).withValues(alpha: 0.35),
               shape: BoxShape.circle,
             ),
           ),
@@ -213,7 +234,7 @@ class _RegisterPageState extends State<RegisterPage> {
             width: 250,
             height: 250,
             decoration: BoxDecoration(
-              color: const Color(0xFFFFB6C1).withValues(alpha: 0.35),
+              color: const Color(0xFFFF8FB1).withValues(alpha: 0.25),
               shape: BoxShape.circle,
             ),
           ),
@@ -225,7 +246,7 @@ class _RegisterPageState extends State<RegisterPage> {
             width: 190,
             height: 190,
             decoration: BoxDecoration(
-              color: const Color(0xFFB8D8FF).withValues(alpha: 0.40),
+              color: const Color(0xFF62C7FF).withValues(alpha: 0.30),
               shape: BoxShape.circle,
             ),
           ),
@@ -274,7 +295,7 @@ class _RegisterPageState extends State<RegisterPage> {
             '✧',
             style: TextStyle(
               fontSize: 25,
-              color: Color(0xFFFFC107),
+              color: Color(0xFFFFD54F),
             ),
           ),
         ),
@@ -294,7 +315,7 @@ class _RegisterPageState extends State<RegisterPage> {
         borderRadius: BorderRadius.circular(30),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF6274A8).withValues(alpha: 0.12),
+            color: const Color(0xFF203864).withValues(alpha: 0.08),
             blurRadius: 35,
             offset: const Offset(0, 16),
           ),
@@ -331,7 +352,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w900,
-                      color: Color(0xFF263B73),
+                      color: Color(0xFF203864),
                     ),
                   ),
                   SizedBox(height: 3),
@@ -340,7 +361,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF9AA8C4),
+                      color: Color(0xFF7183A0),
                     ),
                   ),
                 ],
@@ -356,7 +377,7 @@ class _RegisterPageState extends State<RegisterPage> {
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w800,
-              color: Color(0xFF52668F),
+              color: Color(0xFF7183A0),
             ),
           ),
 
@@ -368,7 +389,7 @@ class _RegisterPageState extends State<RegisterPage> {
             style: const TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF263B73),
+              color: Color(0xFF203864),
             ),
             decoration: _inputDecoration(
               label: 'Masukkan nama',
@@ -384,7 +405,7 @@ class _RegisterPageState extends State<RegisterPage> {
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w800,
-              color: Color(0xFF52668F),
+              color: Color(0xFF7183A0),
             ),
           ),
 
@@ -397,7 +418,7 @@ class _RegisterPageState extends State<RegisterPage> {
             style: const TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF263B73),
+              color: Color(0xFF203864),
             ),
             decoration: _inputDecoration(
               label: 'Masukkan email',
@@ -413,7 +434,7 @@ class _RegisterPageState extends State<RegisterPage> {
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w800,
-              color: Color(0xFF52668F),
+              color: Color(0xFF7183A0),
             ),
           ),
 
@@ -426,7 +447,7 @@ class _RegisterPageState extends State<RegisterPage> {
             style: const TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF263B73),
+              color: Color(0xFF203864),
             ),
             onSubmitted: (_) {
               if (!isLoading) {
@@ -437,6 +458,7 @@ class _RegisterPageState extends State<RegisterPage> {
               label: 'Minimal 6 karakter',
               icon: Icons.lock_rounded,
               suffixIcon: IconButton(
+                constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
                 onPressed: () {
                   setState(() {
                     obscurePassword = !obscurePassword;
@@ -446,7 +468,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   obscurePassword
                       ? Icons.visibility_off_rounded
                       : Icons.visibility_rounded,
-                  color: const Color(0xFFFF8E42),
+                  color: const Color(0xFFFF9364),
                   size: 21,
                 ),
               ),
@@ -455,49 +477,66 @@ class _RegisterPageState extends State<RegisterPage> {
 
           const SizedBox(height: 21),
 
-          // Register button
-          SizedBox(
-            width: double.infinity,
-            height: 56,
-            child: ElevatedButton(
-              onPressed: isLoading ? null : register,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFFC928),
-                disabledBackgroundColor: const Color(0xFFFFE99A),
-                foregroundColor: const Color(0xFF263B73),
-                elevation: 0,
-                shape: RoundedRectangleBorder(
+          // Tactile squishy Register button
+          GestureDetector(
+            onTapDown: (_) {
+              if (!isLoading) setState(() => _isRegisterPressed = true);
+            },
+            onTapUp: (_) => setState(() => _isRegisterPressed = false),
+            onTapCancel: () => setState(() => _isRegisterPressed = false),
+            onTap: isLoading ? null : register,
+            child: AnimatedScale(
+              scale: _isRegisterPressed ? 0.90 : 1.0,
+              duration: const Duration(milliseconds: 100),
+              child: Container(
+                width: double.infinity,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: isLoading ? const Color(0xFFFFE99A) : const Color(0xFFFFC928),
                   borderRadius: BorderRadius.circular(18),
+                  boxShadow: isLoading
+                      ? null
+                      : [
+                          BoxShadow(
+                            color: const Color(0xFFFFC928).withValues(alpha: 0.35),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                ),
+                child: Center(
+                  child: isLoading
+                      ? const SizedBox(
+                          width: 23,
+                          height: 23,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 3,
+                            color: Color(0xFF203864),
+                          ),
+                        )
+                      : const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              'Daftar Sekarang',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w900,
+                                color: Color(0xFF203864),
+                              ),
+                            ),
+                            SizedBox(width: 9),
+                            Text(
+                              '🚀',
+                              style: TextStyle(
+                                fontSize: 19,
+                                color: Color(0xFF203864),
+                              ),
+                            ),
+                          ],
+                        ),
                 ),
               ),
-              child: isLoading
-                  ? const SizedBox(
-                      width: 23,
-                      height: 23,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 3,
-                        color: Color(0xFF263B73),
-                      ),
-                    )
-                  : const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          'Daftar Sekarang',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                        SizedBox(width: 9),
-                        Text(
-                          '🚀',
-                          style: TextStyle(
-                            fontSize: 19,
-                          ),
-                        ),
-                      ],
-                    ),
             ),
           ),
 
@@ -512,7 +551,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF8B9ABB),
+                  color: Color(0xFF7183A0),
                 ),
               ),
               TextButton(
@@ -535,7 +574,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w900,
-                    color: Color(0xFFFF8E42),
+                    color: Color(0xFFFF9364),
                   ),
                 ),
               ),
@@ -551,7 +590,7 @@ class _RegisterPageState extends State<RegisterPage> {
               style: TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFFA6B2C9),
+                color: Color(0xFF7183A0),
               ),
             ),
           ),
@@ -571,68 +610,75 @@ class _RegisterPageState extends State<RegisterPage> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Container(
-                    width: 155,
-                    height: 155,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [
-                          Color(0xFFA8E6CF),
-                          Color(0xFF6FD8B3),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(50),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF6FD8B3)
-                              .withValues(alpha: 0.28),
-                          blurRadius: 30,
-                          offset: const Offset(0, 15),
-                        ),
-                      ],
-                    ),
-                    child: const Center(
-                      child: Text(
-                        '🌱',
-                        style: TextStyle(
-                          fontSize: 82,
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  Positioned(
-                    right: -25,
-                    top: -20,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 11,
-                        vertical: 8,
-                      ),
+              Transform.rotate(
+                angle: 0.05,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Container(
+                      width: 155,
+                      height: 155,
                       decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
+                        gradient: const LinearGradient(
+                          colors: [
+                            Color(0xFFA8E6CF),
+                            Color(0xFF6FD8B3),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(40),
+                        border: Border.all(
+                          color: Colors.white,
+                          width: 4,
+                        ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.07),
-                            blurRadius: 12,
+                            color: const Color(0xFF6FD8B3)
+                                .withValues(alpha: 0.28),
+                            blurRadius: 30,
+                            offset: const Offset(0, 15),
                           ),
                         ],
                       ),
-                      child: const Text(
-                        '🎉',
-                        style: TextStyle(
-                          fontSize: 25,
+                      child: const Center(
+                        child: Text(
+                          '🌱',
+                          style: TextStyle(
+                            fontSize: 82,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
+
+                    Positioned(
+                      right: -25,
+                      top: -20,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 11,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.07),
+                              blurRadius: 12,
+                            ),
+                          ],
+                        ),
+                        child: const Text(
+                          '🎉',
+                          style: TextStyle(
+                            fontSize: 25,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
 
               const SizedBox(height: 22),
@@ -643,7 +689,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 style: TextStyle(
                   fontSize: 30,
                   fontWeight: FontWeight.w900,
-                  color: Color(0xFF263B73),
+                  color: Color(0xFF203864),
                   letterSpacing: -0.7,
                 ),
               ),
@@ -679,7 +725,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFF8B9ABB),
+                  color: Color(0xFF7183A0),
                   height: 1.5,
                 ),
               ),
@@ -693,7 +739,7 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFFFDF5),
+      backgroundColor: const Color(0xFFFFF9F0),
       body: SafeArea(
         child: Stack(
           children: [
@@ -715,27 +761,30 @@ class _RegisterPageState extends State<RegisterPage> {
                           horizontal: 45,
                           vertical: 30,
                         ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            // ==========================================
-                            // KIRI — FORM REGISTER
-                            // ==========================================
+                        child: ScaleTransition(
+                          scale: _scaleAnimation,
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              // ==========================================
+                              // KIRI — FORM REGISTER
+                              // ==========================================
 
-                            Expanded(
-                              child: Center(
-                                child: _buildRegisterForm(),
+                              Expanded(
+                                child: Center(
+                                  child: _buildRegisterForm(),
+                                ),
                               ),
-                            ),
 
-                            const SizedBox(width: 70),
+                              const SizedBox(width: 70),
 
-                            // ==========================================
-                            // KANAN — BRANDING
-                            // ==========================================
+                              // ==========================================
+                              // KANAN — BRANDING
+                              // ==========================================
 
-                            _buildBranding(),
-                          ],
+                              _buildBranding(),
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -758,11 +807,11 @@ class _RegisterPageState extends State<RegisterPage> {
                     Navigator.pop(context);
                   },
                   child: const SizedBox(
-                    width: 46,
-                    height: 46,
+                    width: 48, // Improved min touch target >= 48
+                    height: 48,
                     child: Icon(
                       Icons.arrow_back_rounded,
-                      color: Color(0xFF263B73),
+                      color: Color(0xFF203864),
                       size: 21,
                     ),
                   ),

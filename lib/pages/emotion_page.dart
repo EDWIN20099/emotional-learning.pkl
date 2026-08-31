@@ -3,6 +3,8 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../utils/emotion_helpers.dart';
+
 class EmotionPage extends StatefulWidget {
   const EmotionPage({super.key});
 
@@ -66,10 +68,7 @@ class _EmotionPageState extends State<EmotionPage>
 
   Future<void> loadEmotions() async {
     try {
-      final data = await supabase
-          .from('emotions')
-          .select()
-          .order('name');
+      final data = await supabase.from('emotions').select().order('name');
 
       if (!mounted) return;
 
@@ -97,101 +96,12 @@ class _EmotionPageState extends State<EmotionPage>
   }
 
   // =========================================================
-  // EMOTION ICON
+  // EMOTION ICON / COLOR / TIP
   // =========================================================
-
-  IconData getEmotionIcon(String name) {
-    switch (name.toLowerCase()) {
-      case 'senang':
-        return Icons.sentiment_very_satisfied_rounded;
-
-      case 'sedih':
-        return Icons.sentiment_dissatisfied_rounded;
-
-      case 'marah':
-        return Icons.sentiment_very_dissatisfied_rounded;
-
-      case 'jijik':
-        return Icons.sick_rounded;
-
-      default:
-        return Icons.emoji_emotions_rounded;
-    }
-  }
-
-  // =========================================================
-  // EMOTION COLOR
-  // =========================================================
-
-  Color getEmotionColor(String name) {
-    switch (name.toLowerCase()) {
-      case 'senang':
-        return const Color(0xFFFFB300);
-
-      case 'sedih':
-        return const Color(0xFF42A5F5);
-
-      case 'marah':
-        return const Color(0xFFEF5350);
-
-      case 'jijik':
-        return const Color(0xFF66BB6A);
-
-      default:
-        return orangeColor;
-    }
-  }
-
-  // =========================================================
-  // EMOTION LIGHT COLOR
-  // =========================================================
-
-  Color getEmotionLightColor(String name) {
-    switch (name.toLowerCase()) {
-      case 'senang':
-        return const Color(0xFFFFF2C2);
-
-      case 'sedih':
-        return const Color(0xFFE0F3FF);
-
-      case 'marah':
-        return const Color(0xFFFFE3E1);
-
-      case 'jijik':
-        return const Color(0xFFE1F7E8);
-
-      default:
-        return const Color(0xFFFFE5D7);
-    }
-  }
-
-  // =========================================================
-  // EMOTION DESCRIPTION / TIP
-  // =========================================================
-
-  String getEmotionTip(String name) {
-    switch (name.toLowerCase()) {
-      case 'senang':
-        return 'Wah, kamu sedang merasa senang! 🌟 '
-            'Nikmati perasaan positifmu dan jangan lupa berbagi kebahagiaan dengan orang lain.';
-
-      case 'sedih':
-        return 'Tidak apa-apa merasa sedih. 💙 '
-            'Cobalah bercerita kepada orang yang kamu percaya dan lakukan sesuatu yang membuatmu nyaman.';
-
-      case 'marah':
-        return 'Kamu sedang merasa marah. ❤️‍🩹 '
-            'Coba tarik napas perlahan dan beri dirimu waktu untuk tenang sebelum melakukan sesuatu.';
-
-      case 'jijik':
-        return 'Kamu merasa tidak nyaman atau jijik. 🌱 '
-            'Jauhi hal yang membuatmu tidak nyaman dan ceritakan perasaanmu dengan cara yang baik.';
-
-      default:
-        return 'Tidak apa-apa merasakan emosi apa pun. '
-            'Yuk kenali perasaanmu dan belajar mengelolanya dengan baik.';
-    }
-  }
+  // Sekarang semua diambil langsung dari data Supabase lewat
+  // EmotionHelpers (kolom icon_name, color_hex, light_color_hex,
+  // how_to_handle di tabel `emotions`), bukan ditebak dari nama
+  // emosi lewat switch-case lagi. Lihat lib/utils/emotion_helpers.dart
 
   // =========================================================
   // SELECT EMOTION
@@ -205,9 +115,7 @@ class _EmotionPageState extends State<EmotionPage>
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text(
-            'Silakan login terlebih dahulu.',
-          ),
+          content: const Text('Silakan login terlebih dahulu.'),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
@@ -227,33 +135,25 @@ class _EmotionPageState extends State<EmotionPage>
       if (!mounted) return;
 
       final name = emotion['name']?.toString() ?? 'emosi';
-      final color = getEmotionColor(name);
+      final color = EmotionHelpers.colorFromEmotion(emotion);
 
       await showDialog(
         context: context,
         barrierDismissible: false,
         builder: (context) {
-          return _emotionDialog(
-            name: name,
-            color: color,
-          );
+          return _emotionDialog(emotion: emotion);
         },
       );
 
       if (!mounted) return;
 
-      Navigator.pushReplacementNamed(
-        context,
-        '/home-main',
-      );
+      Navigator.pushReplacementNamed(context, '/home-main');
     } catch (e) {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            'Gagal menyimpan emosi: $e',
-          ),
+          content: Text('Gagal menyimpan emosi: $e'),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
@@ -267,136 +167,135 @@ class _EmotionPageState extends State<EmotionPage>
   // EMOTION DIALOG
   // =========================================================
 
-  Widget _emotionDialog({
-    required String name,
-    required Color color,
-  }) {
+  Widget _emotionDialog({required Map<String, dynamic> emotion}) {
+    final name = emotion['name']?.toString() ?? 'emosi';
+    final color = EmotionHelpers.colorFromEmotion(emotion);
+
     return Dialog(
       backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.symmetric(
-        horizontal: 35,
-      ),
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(
-          24,
-          25,
-          24,
-          22,
-        ),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(32),
-          border: Border.all(
-            color: color.withValues(alpha: 0.25),
-            width: 2,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 560),
+        child: Container(
+          padding: const EdgeInsets.all(22),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(color: color.withValues(alpha: 0.25), width: 2),
+            boxShadow: [
+              BoxShadow(
+                color: color.withValues(alpha: 0.18),
+                blurRadius: 25,
+                offset: const Offset(0, 10),
+              ),
+            ],
           ),
-          boxShadow: [
-            BoxShadow(
-              color: color.withValues(alpha: 0.18),
-              blurRadius: 25,
-              offset: const Offset(0, 10),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Stack(
-              alignment: Alignment.center,
-              children: [
-                Container(
-                  width: 105,
-                  height: 105,
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.10),
-                    shape: BoxShape.circle,
-                  ),
-                ),
-
-                Container(
-                  width: 82,
-                  height: 82,
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.18),
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: color.withValues(alpha: 0.30),
-                      width: 2,
+          // Layout horizontal (icon kiri, teks+tombol kanan) --
+          // dibikin buat landscape, tingginya jadi jauh lebih
+          // pendek dibanding versi vertikal, dan lebih ramah
+          // anak karena nggak perlu scroll buat nemu tombolnya.
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Stack(
+                alignment: Alignment.center,
+                children: [
+                  Container(
+                    width: 72,
+                    height: 72,
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.10),
+                      shape: BoxShape.circle,
                     ),
                   ),
-                  child: Icon(
-                    getEmotionIcon(name),
-                    size: 46,
-                    color: color,
+
+                  Container(
+                    width: 58,
+                    height: 58,
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.18),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: color.withValues(alpha: 0.30),
+                        width: 2,
+                      ),
+                    ),
+                    child: Icon(
+                      EmotionHelpers.iconFromEmotion(emotion),
+                      size: 32,
+                      color: color,
+                    ),
                   ),
-                ),
 
-                Positioned(
-                  top: 0,
-                  right: 0,
-                  child: _sparkle(
-                    size: 20,
-                    color: color,
-                    delay: 0.2,
+                  Positioned(
+                    top: 0,
+                    right: 0,
+                    child: _sparkle(size: 14, color: color, delay: 0.2),
                   ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 18),
-
-            Text(
-              'Kamu sedang $name! ✨',
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 23,
-                fontWeight: FontWeight.w900,
-                color: navyColor,
+                ],
               ),
-            ),
 
-            const SizedBox(height: 10),
+              const SizedBox(width: 16),
 
-            Text(
-              getEmotionTip(name),
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 14,
-                height: 1.5,
-                fontWeight: FontWeight.w600,
-                color: textSoft,
-              ),
-            ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Kamu sedang $name! ✨',
+                      style: const TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w900,
+                        color: navyColor,
+                      ),
+                    ),
 
-            const SizedBox(height: 22),
+                    const SizedBox(height: 4),
 
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: color,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 14,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(18),
-                  ),
+                    Text(
+                      EmotionHelpers.howToHandleFromEmotion(emotion),
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        height: 1.35,
+                        fontWeight: FontWeight.w600,
+                        color: textSoft,
+                      ),
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: color,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                        child: const Text(
+                          'Mengerti 👍',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                child: const Text(
-                  'Mengerti 👍',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -416,7 +315,6 @@ class _EmotionPageState extends State<EmotionPage>
             // =====================================================
             // BACKGROUND DECORATIONS
             // =====================================================
-
             Positioned(
               top: -35,
               right: -35,
@@ -447,217 +345,174 @@ class _EmotionPageState extends State<EmotionPage>
             // =====================================================
             // MAIN CONTENT
             // =====================================================
-
             isLoading
                 ? const Center(
-                    child: CircularProgressIndicator(
-                      color: orangeColor,
-                    ),
+                    child: CircularProgressIndicator(color: orangeColor),
                   )
                 : emotions.isEmpty
-                    ? _emptyState()
-                    : ListView(
-                        physics: const BouncingScrollPhysics(),
-                        padding: const EdgeInsets.fromLTRB(
-                          20,
-                          18,
-                          20,
-                          35,
-                        ),
+                ? _emptyState()
+                : ListView(
+                    physics: const BouncingScrollPhysics(),
+                    padding: const EdgeInsets.fromLTRB(20, 18, 20, 35),
+                    children: [
+                      // =================================================
+                      // HEADER
+                      // =================================================
+                      Row(
                         children: [
-                          // =================================================
-                          // HEADER
-                          // =================================================
-
-                          Row(
-                            children: [
-                              Container(
-                                width: 58,
-                                height: 58,
-                                decoration: BoxDecoration(
-                                  gradient: const LinearGradient(
-                                    colors: [
-                                      Color(0xFFFFE77A),
-                                      Color(0xFFFFC83D),
-                                    ],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  ),
-                                  borderRadius:
-                                      BorderRadius.circular(20),
-                                  border: Border.all(
-                                    color: Colors.white,
-                                    width: 3,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: yellowColor.withValues(
-                                        alpha: 0.28,
-                                      ),
-                                      blurRadius: 14,
-                                      offset: const Offset(0, 6),
-                                    ),
-                                  ],
-                                ),
-                                child: const Center(
-                                  child: Text(
-                                    '🌈',
-                                    style: TextStyle(
-                                      fontSize: 30,
-                                    ),
-                                  ),
-                                ),
+                          Container(
+                            width: 58,
+                            height: 58,
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFFFFE77A), Color(0xFFFFC83D)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
                               ),
-
-                              const SizedBox(width: 13),
-
-                              const Expanded(
-                                child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Kenali Emosimu',
-                                      style: TextStyle(
-                                        fontSize: 21,
-                                        fontWeight: FontWeight.w900,
-                                        color: navyColor,
-                                      ),
-                                    ),
-                                    SizedBox(height: 3),
-                                    Text(
-                                      'Kenali • Rasakan • Kelola ✨',
-                                      style: TextStyle(
-                                        fontSize: 12.5,
-                                        fontWeight: FontWeight.w700,
-                                        color: textSoft,
-                                      ),
-                                    ),
-                                  ],
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: Colors.white, width: 3),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: yellowColor.withValues(alpha: 0.28),
+                                  blurRadius: 14,
+                                  offset: const Offset(0, 6),
                                 ),
-                              ),
-
-                              _floatingEmoji(
-                                emoji: '✨',
-                                size: 25,
-                              ),
-                            ],
+                              ],
+                            ),
+                            child: const Center(
+                              child: Text('🌈', style: TextStyle(fontSize: 30)),
+                            ),
                           ),
 
-                          const SizedBox(height: 22),
+                          const SizedBox(width: 13),
 
-                          // =================================================
-                          // HERO CARD
-                          // =================================================
-
-                          _heroCard(),
-
-                          const SizedBox(height: 27),
-
-                          // =================================================
-                          // SECTION TITLE
-                          // =================================================
-
-                          Row(
-                            children: [
-                              Container(
-                                width: 7,
-                                height: 27,
-                                decoration: BoxDecoration(
-                                  color: purpleColor,
-                                  borderRadius:
-                                      BorderRadius.circular(10),
-                                ),
-                              ),
-
-                              const SizedBox(width: 10),
-
-                              const Expanded(
-                                child: Text(
-                                  'Pilih Perasaanmu!',
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Kenali Emosimu',
                                   style: TextStyle(
                                     fontSize: 21,
                                     fontWeight: FontWeight.w900,
                                     color: navyColor,
                                   ),
                                 ),
-                              ),
-
-                              _floatingEmoji(
-                                emoji: '💖',
-                                size: 24,
-                              ),
-                            ],
+                                SizedBox(height: 3),
+                                Text(
+                                  'Kenali • Rasakan • Kelola ✨',
+                                  style: TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: textSoft,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
 
-                          const SizedBox(height: 5),
+                          _floatingEmoji(emoji: '✨', size: 25),
+                        ],
+                      ),
 
-                          const Padding(
-                            padding: EdgeInsets.only(left: 17),
+                      const SizedBox(height: 22),
+
+                      // =================================================
+                      // HERO CARD
+                      // =================================================
+                      _heroCard(),
+
+                      const SizedBox(height: 27),
+
+                      // =================================================
+                      // SECTION TITLE
+                      // =================================================
+                      Row(
+                        children: [
+                          Container(
+                            width: 7,
+                            height: 27,
+                            decoration: BoxDecoration(
+                              color: purpleColor,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+
+                          const SizedBox(width: 10),
+
+                          const Expanded(
                             child: Text(
-                              'Tidak ada jawaban yang salah. Semua emosi itu penting! 🌱',
+                              'Pilih Perasaanmu!',
                               style: TextStyle(
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w600,
-                                color: textSoft,
+                                fontSize: 21,
+                                fontWeight: FontWeight.w900,
+                                color: navyColor,
                               ),
                             ),
                           ),
 
-                          const SizedBox(height: 18),
-
-                          // =================================================
-                          // EMOTION CARDS
-                          // =================================================
-
-                          ...emotions.asMap().entries.map(
-                            (entry) {
-                              final index = entry.key;
-                              final emotion = entry.value;
-
-                              final name =
-                                  emotion['name']?.toString() ??
-                                      'Emosi';
-
-                              final description =
-                                  emotion['description']
-                                          ?.toString() ??
-                                      '';
-
-                              final color =
-                                  getEmotionColor(name);
-
-                              final lightColor =
-                                  getEmotionLightColor(name);
-
-                              return Padding(
-                                padding: const EdgeInsets.only(
-                                  bottom: 15,
-                                ),
-                                child: _emotionCard(
-                                  name: name,
-                                  description: description,
-                                  color: color,
-                                  lightColor: lightColor,
-                                  icon: getEmotionIcon(name),
-                                  delay: index * 0.25,
-                                  onTap: () {
-                                    selectEmotion(emotion);
-                                  },
-                                ),
-                              );
-                            },
-                          ),
-
-                          const SizedBox(height: 5),
-
-                          // =================================================
-                          // BOTTOM MESSAGE
-                          // =================================================
-
-                          _bottomMessage(),
+                          _floatingEmoji(emoji: '💖', size: 24),
                         ],
                       ),
+
+                      const SizedBox(height: 5),
+
+                      const Padding(
+                        padding: EdgeInsets.only(left: 17),
+                        child: Text(
+                          'Tidak ada jawaban yang salah. Semua emosi itu penting! 🌱',
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                            color: textSoft,
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 18),
+
+                      // =================================================
+                      // EMOTION CARDS
+                      // =================================================
+                      ...emotions.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final emotion = entry.value;
+
+                        final name = emotion['name']?.toString() ?? 'Emosi';
+
+                        final description =
+                            emotion['description']?.toString() ?? '';
+
+                        final color = EmotionHelpers.colorFromEmotion(emotion);
+
+                        final lightColor = EmotionHelpers.lightColorFromEmotion(
+                          emotion,
+                        );
+
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 15),
+                          child: _emotionCard(
+                            name: name,
+                            description: description,
+                            color: color,
+                            lightColor: lightColor,
+                            icon: EmotionHelpers.iconFromEmotion(emotion),
+                            delay: index * 0.25,
+                            onTap: () {
+                              selectEmotion(emotion);
+                            },
+                          ),
+                        );
+                      }),
+
+                      const SizedBox(height: 5),
+
+                      // =================================================
+                      // BOTTOM MESSAGE
+                      // =================================================
+                      _bottomMessage(),
+                    ],
+                  ),
           ],
         ),
       ),
@@ -674,23 +529,15 @@ class _EmotionPageState extends State<EmotionPage>
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [
-            Color(0xFFFFE98A),
-            Color(0xFFFFC85A),
-          ],
+          colors: [Color(0xFFFFE98A), Color(0xFFFFC85A)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(32),
-        border: Border.all(
-          color: Colors.white,
-          width: 3,
-        ),
+        border: Border.all(color: Colors.white, width: 3),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFFFC83D).withValues(
-              alpha: 0.25,
-            ),
+            color: const Color(0xFFFFC83D).withValues(alpha: 0.25),
             blurRadius: 20,
             offset: const Offset(0, 9),
           ),
@@ -720,31 +567,19 @@ class _EmotionPageState extends State<EmotionPage>
           Positioned(
             top: 15,
             right: 130,
-            child: _sparkle(
-              size: 20,
-              color: Colors.white,
-              delay: 0.0,
-            ),
+            child: _sparkle(size: 20, color: Colors.white, delay: 0.0),
           ),
 
           Positioned(
             top: 40,
             right: 20,
-            child: _sparkle(
-              size: 15,
-              color: Colors.white,
-              delay: 0.3,
-            ),
+            child: _sparkle(size: 15, color: Colors.white, delay: 0.3),
           ),
 
           Positioned(
             bottom: 22,
             right: 105,
-            child: _sparkle(
-              size: 17,
-              color: Colors.white,
-              delay: 0.6,
-            ),
+            child: _sparkle(size: 17, color: Colors.white, delay: 0.6),
           ),
 
           Positioned(
@@ -758,20 +593,13 @@ class _EmotionPageState extends State<EmotionPage>
           ),
 
           Padding(
-            padding: const EdgeInsets.fromLTRB(
-              22,
-              18,
-              15,
-              16,
-            ),
+            padding: const EdgeInsets.fromLTRB(22, 18, 15, 16),
             child: Row(
               children: [
                 const Expanded(
                   child: Column(
-                    crossAxisAlignment:
-                        CrossAxisAlignment.start,
-                    mainAxisAlignment:
-                        MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
                         '🌟 Petualangan Emosi',
@@ -812,7 +640,6 @@ class _EmotionPageState extends State<EmotionPage>
                 // =================================================
                 // EMOJI
                 // =================================================
-
                 SizedBox(
                   width: 110,
                   height: 120,
@@ -824,13 +651,10 @@ class _EmotionPageState extends State<EmotionPage>
                         builder: (context, child) {
                           final value =
                               (math.sin(
-                                        _sparkleController
-                                                .value *
-                                            math.pi *
-                                            2,
-                                      ) +
-                                      1) /
-                                  2;
+                                    _sparkleController.value * math.pi * 2,
+                                  ) +
+                                  1) /
+                              2;
 
                           return Container(
                             width: 85 + (value * 10),
@@ -849,31 +673,19 @@ class _EmotionPageState extends State<EmotionPage>
                         width: 102,
                         height: 102,
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(
-                            alpha: 0.88,
-                          ),
+                          color: Colors.white.withValues(alpha: 0.88),
                           shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Colors.white,
-                            width: 4,
-                          ),
+                          border: Border.all(color: Colors.white, width: 4),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withValues(
-                                alpha: 0.08,
-                              ),
+                              color: Colors.black.withValues(alpha: 0.08),
                               blurRadius: 12,
                               offset: const Offset(0, 5),
                             ),
                           ],
                         ),
                         child: const Center(
-                          child: Text(
-                            '🥰',
-                            style: TextStyle(
-                              fontSize: 54,
-                            ),
-                          ),
+                          child: Text('🥰', style: TextStyle(fontSize: 54)),
                         ),
                       ),
                     ],
@@ -915,10 +727,7 @@ class _EmotionPageState extends State<EmotionPage>
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(27),
-                border: Border.all(
-                  color: lightColor,
-                  width: 2,
-                ),
+                border: Border.all(color: lightColor, width: 2),
                 boxShadow: [
                   BoxShadow(
                     color: color.withValues(alpha: 0.12),
@@ -932,7 +741,6 @@ class _EmotionPageState extends State<EmotionPage>
                   // =================================================
                   // ICON
                   // =================================================
-
                   Stack(
                     clipBehavior: Clip.none,
                     children: [
@@ -941,8 +749,7 @@ class _EmotionPageState extends State<EmotionPage>
                         height: 76,
                         decoration: BoxDecoration(
                           color: lightColor,
-                          borderRadius:
-                              BorderRadius.circular(23),
+                          borderRadius: BorderRadius.circular(23),
                         ),
                         child: Center(
                           child: Container(
@@ -950,24 +757,16 @@ class _EmotionPageState extends State<EmotionPage>
                             height: 62,
                             decoration: BoxDecoration(
                               color: color,
-                              borderRadius:
-                                  BorderRadius.circular(19),
+                              borderRadius: BorderRadius.circular(19),
                               boxShadow: [
                                 BoxShadow(
-                                  color:
-                                      color.withValues(
-                                    alpha: 0.28,
-                                  ),
+                                  color: color.withValues(alpha: 0.28),
                                   blurRadius: 9,
                                   offset: const Offset(0, 5),
                                 ),
                               ],
                             ),
-                            child: Icon(
-                              icon,
-                              size: 34,
-                              color: Colors.white,
-                            ),
+                            child: Icon(icon, size: 34, color: Colors.white),
                           ),
                         ),
                       ),
@@ -975,11 +774,7 @@ class _EmotionPageState extends State<EmotionPage>
                       Positioned(
                         right: -5,
                         top: -8,
-                        child: _sparkle(
-                          size: 16,
-                          color: color,
-                          delay: delay,
-                        ),
+                        child: _sparkle(size: 16, color: color, delay: delay),
                       ),
 
                       Positioned(
@@ -999,22 +794,18 @@ class _EmotionPageState extends State<EmotionPage>
                   // =================================================
                   // TEXT
                   // =================================================
-
                   Expanded(
                     child: Column(
-                      crossAxisAlignment:
-                          CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Container(
-                          padding:
-                              const EdgeInsets.symmetric(
+                          padding: const EdgeInsets.symmetric(
                             horizontal: 8,
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
                             color: lightColor,
-                            borderRadius:
-                                BorderRadius.circular(20),
+                            borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
                             _emotionBadge(name),
@@ -1060,7 +851,6 @@ class _EmotionPageState extends State<EmotionPage>
                   // =================================================
                   // ARROW
                   // =================================================
-
                   Container(
                     width: 39,
                     height: 39,
@@ -1069,9 +859,7 @@ class _EmotionPageState extends State<EmotionPage>
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: color.withValues(
-                            alpha: 0.22,
-                          ),
+                          color: color.withValues(alpha: 0.22),
                           blurRadius: 7,
                           offset: const Offset(0, 4),
                         ),
@@ -1124,18 +912,12 @@ class _EmotionPageState extends State<EmotionPage>
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [
-            Color(0xFFFFF0F5),
-            Color(0xFFFFF8FB),
-          ],
+          colors: [Color(0xFFFFF0F5), Color(0xFFFFF8FB)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(27),
-        border: Border.all(
-          color: const Color(0xFFFFD7E4),
-          width: 2,
-        ),
+        border: Border.all(color: const Color(0xFFFFD7E4), width: 2),
         boxShadow: [
           BoxShadow(
             color: pinkColor.withValues(alpha: 0.10),
@@ -1161,12 +943,7 @@ class _EmotionPageState extends State<EmotionPage>
               ],
             ),
             child: const Center(
-              child: Text(
-                '💖',
-                style: TextStyle(
-                  fontSize: 29,
-                ),
-              ),
+              child: Text('💖', style: TextStyle(fontSize: 29)),
             ),
           ),
 
@@ -1174,8 +951,7 @@ class _EmotionPageState extends State<EmotionPage>
 
           const Expanded(
             child: Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   'Ingat ya! ✨',
@@ -1217,20 +993,12 @@ class _EmotionPageState extends State<EmotionPage>
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(30),
-            border: Border.all(
-              color: const Color(0xFFE6EEF7),
-              width: 2,
-            ),
+            border: Border.all(color: const Color(0xFFE6EEF7), width: 2),
           ),
           child: const Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                '🌱',
-                style: TextStyle(
-                  fontSize: 55,
-                ),
-              ),
+              Text('🌱', style: TextStyle(fontSize: 55)),
               SizedBox(height: 12),
               Text(
                 'Belum ada data emosi',
@@ -1270,24 +1038,17 @@ class _EmotionPageState extends State<EmotionPage>
     return AnimatedBuilder(
       animation: _sparkleController,
       builder: (context, child) {
-        final progress =
-            (_sparkleController.value + delay) % 1.0;
+        final progress = (_sparkleController.value + delay) % 1.0;
 
-        final opacity =
-            (math.sin(progress * math.pi * 2) + 1) / 2;
+        final opacity = (math.sin(progress * math.pi * 2) + 1) / 2;
 
-        final scale =
-            0.65 + (opacity * 0.55);
+        final scale = 0.65 + (opacity * 0.55);
 
         return Opacity(
           opacity: 0.25 + (opacity * 0.75),
           child: Transform.scale(
             scale: scale,
-            child: Icon(
-              Icons.auto_awesome_rounded,
-              size: size,
-              color: color,
-            ),
+            child: Icon(Icons.auto_awesome_rounded, size: size, color: color),
           ),
         );
       },
@@ -1298,29 +1059,15 @@ class _EmotionPageState extends State<EmotionPage>
   // FLOATING EMOJI
   // =========================================================
 
-  Widget _floatingEmoji({
-    required String emoji,
-    required double size,
-  }) {
+  Widget _floatingEmoji({required String emoji, required double size}) {
     return AnimatedBuilder(
       animation: _sparkleController,
       builder: (context, child) {
-        final movement =
-            math.sin(
-                  _sparkleController.value *
-                      math.pi *
-                      2,
-                ) *
-                3;
+        final movement = math.sin(_sparkleController.value * math.pi * 2) * 3;
 
         return Transform.translate(
           offset: Offset(0, movement),
-          child: Text(
-            emoji,
-            style: TextStyle(
-              fontSize: size,
-            ),
-          ),
+          child: Text(emoji, style: TextStyle(fontSize: size)),
         );
       },
     );
@@ -1330,17 +1077,11 @@ class _EmotionPageState extends State<EmotionPage>
   // DECORATIVE CIRCLE
   // =========================================================
 
-  Widget _decorativeCircle({
-    required double size,
-    required Color color,
-  }) {
+  Widget _decorativeCircle({required double size, required Color color}) {
     return Container(
       width: size,
       height: size,
-      decoration: BoxDecoration(
-        color: color,
-        shape: BoxShape.circle,
-      ),
+      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
     );
   }
 }

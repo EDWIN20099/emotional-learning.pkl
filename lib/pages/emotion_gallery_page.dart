@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../utils/emotion_helpers.dart';
+
 class EmotionGalleryPage extends StatefulWidget {
   const EmotionGalleryPage({super.key});
 
@@ -49,61 +51,15 @@ class _EmotionGalleryPageState extends State<EmotionGalleryPage> {
     }
   }
 
-  IconData getEmotionIcon(String name) {
-    switch (name.toLowerCase()) {
-      case 'senang':
-        return Icons.sentiment_very_satisfied;
-      case 'sedih':
-        return Icons.sentiment_dissatisfied;
-      case 'marah':
-        return Icons.sentiment_very_dissatisfied;
-      case 'jijik':
-        return Icons.sick;
-      default:
-        return Icons.emoji_emotions;
-    }
-  }
-
-  Color getEmotionColor(String name) {
-    switch (name.toLowerCase()) {
-      case 'senang':
-        return const Color(0xFFFFB703); // Kuning cerah
-      case 'sedih':
-        return const Color(0xFF3F9FE5); // Biru ramah
-      case 'marah':
-        return const Color(0xFFFF5F87); // Pink/Merah ceria
-      case 'jijik':
-        return const Color(0xFF4CAF60); // Hijau segar
-      default:
-        return const Color(0xFFFF8A3D); // Orange ceria
-    }
-  }
-
-  String getEmotionTip(String name) {
-    switch (name.toLowerCase()) {
-      case 'senang':
-        return 'Nikmati perasaan senangmu dan bagikan kebahagiaan kepada orang di sekitarmu.';
-
-      case 'sedih':
-        return 'Tidak apa-apa merasa sedih. Cobalah bercerita kepada orang yang kamu percaya.';
-
-      case 'marah':
-        return 'Tarik napas perlahan dan beri dirimu waktu untuk tenang sebelum bertindak.';
-
-      case 'jijik':
-        return 'Jauhi hal yang membuatmu tidak nyaman dan sampaikan perasaanmu dengan baik.';
-
-      default:
-        return 'Kenali perasaanmu dan belajar mengelolanya dengan cara yang baik.';
-    }
-  }
-
   void showEmotionDetail(Map<String, dynamic> emotion) {
     final name = emotion['name']?.toString() ?? 'Emosi';
     final description = emotion['description']?.toString() ?? '';
 
-    final color = getEmotionColor(name);
-    final icon = getEmotionIcon(name);
+    // Icon, warna, dan tips sekarang datang langsung dari Supabase
+    // (kolom icon_name, color_hex, how_to_handle), bukan ditebak
+    // dari nama emosi lewat switch-case lagi.
+    final color = EmotionHelpers.colorFromEmotion(emotion);
+    final icon = EmotionHelpers.iconFromEmotion(emotion);
 
     showGeneralDialog(
       context: context,
@@ -203,7 +159,7 @@ class _EmotionGalleryPageState extends State<EmotionGalleryPage> {
                           const SizedBox(width: 14),
                           Expanded(
                             child: Text(
-                              getEmotionTip(name),
+                              EmotionHelpers.howToHandleFromEmotion(emotion),
                               style: const TextStyle(
                                 fontSize: 13,
                                 height: 1.35,
@@ -357,7 +313,7 @@ class _EmotionGalleryPageState extends State<EmotionGalleryPage> {
                     final description =
                         emotion['description']?.toString() ?? '';
 
-                    final color = getEmotionColor(name);
+                    final color = EmotionHelpers.colorFromEmotion(emotion);
 
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 16),
@@ -402,7 +358,7 @@ class _EmotionGalleryPageState extends State<EmotionGalleryPage> {
                                     ],
                                   ),
                                   child: Icon(
-                                    getEmotionIcon(name),
+                                    EmotionHelpers.iconFromEmotion(emotion),
                                     size: 38,
                                     color: Colors.white,
                                   ),

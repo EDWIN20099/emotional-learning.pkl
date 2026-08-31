@@ -9,423 +9,578 @@ class GardenPage extends StatefulWidget {
 }
 
 class _GardenPageState extends State<GardenPage> {
-  final supabase = Supabase.instance.client;
+  final SupabaseClient _supabase = Supabase.instance.client;
 
-  // =========================
+  // ============================================================
   // DATA BUNGA
-  // =========================
+  // ============================================================
 
-  final Map<String, Map<String, String>> flowerData = {
-    'sunflower': {
-      'emoji': '🌻',
+  final List<Map<String, dynamic>> flowers = [
+    {
+      'id': 'sunflower',
       'name': 'Matahari',
-      'rewardName': 'Bunga Matahari',
+      'emoji': '🌻',
+      'softColor': const Color(0xFFFFF3C4),
     },
-    'tulip': {'emoji': '🌷', 'name': 'Tulip', 'rewardName': 'Bunga Tulip'},
-    'rose': {'emoji': '🌹', 'name': 'Mawar', 'rewardName': 'Bunga Mawar'},
-    'daisy': {'emoji': '🌼', 'name': 'Daisy', 'rewardName': 'Bunga Daisy'},
-  };
+    {
+      'id': 'tulip',
+      'name': 'Tulip',
+      'emoji': '🌷',
+      'softColor': const Color(0xFFFFE4F0),
+    },
+    {
+      'id': 'rose',
+      'name': 'Mawar',
+      'emoji': '🌹',
+      'softColor': const Color(0xFFFFE0E0),
+    },
+    {
+      'id': 'daisy',
+      'name': 'Daisy',
+      'emoji': '🌼',
+      'softColor': const Color(0xFFFFF5CE),
+    },
+  ];
 
-  // =========================
-  // BUNGA YANG SUDAH DITANAM
-  // =========================
+  final List<Map<String, dynamic>> plantedFlowers = [];
 
-  List<Map<String, dynamic>> placedFlowers = [];
-
-  // =========================
-  // JUMLAH REWARD
-  // =========================
-
-  Map<String, int> rewardCounts = {
-    'sunflower': 0,
-    'tulip': 0,
-    'rose': 0,
-    'daisy': 0,
-  };
-
+  int flowerCount = 0;
   bool isLoading = true;
 
-  int? draggingFlowerIndex;
-
-  // =========================
+  // ============================================================
   // INIT
-  // =========================
+  // ============================================================
 
   @override
   void initState() {
     super.initState();
-    loadGarden();
+    _loadGarden();
   }
 
-  // =========================
-  // LOAD GARDEN
-  // =========================
+  // ============================================================
+  // LOAD REWARD
+  // ============================================================
 
-  Future<void> loadGarden() async {
+  Future<void> _loadGarden() async {
     try {
-      final user = supabase.auth.currentUser;
+      final user = _supabase.auth.currentUser;
 
       if (user == null) {
-        if (!mounted) return;
-
-        setState(() {
-          isLoading = false;
-        });
-
+        if (mounted) {
+          setState(() {
+            isLoading = false;
+          });
+        }
         return;
       }
 
-      // =========================
-      // AMBIL REWARD USER
-      // =========================
-
-      final rewards = await supabase
+      final response = await _supabase
           .from('user_rewards')
-          .select()
+          .select('id, reward_type, created_at')
           .eq('user_id', user.id)
-          .eq('reward_type', 'flower');
-
-      final newRewardCounts = {
-        'sunflower': 0,
-        'tulip': 0,
-        'rose': 0,
-        'daisy': 0,
-      };
-
-      for (final reward in rewards) {
-        final rewardName = reward['reward_name']?.toString();
-
-        if (rewardName == 'Bunga Matahari') {
-          newRewardCounts['sunflower'] = newRewardCounts['sunflower']! + 1;
-        } else if (rewardName == 'Bunga Tulip') {
-          newRewardCounts['tulip'] = newRewardCounts['tulip']! + 1;
-        } else if (rewardName == 'Bunga Mawar') {
-          newRewardCounts['rose'] = newRewardCounts['rose']! + 1;
-        } else if (rewardName == 'Bunga Daisy') {
-          newRewardCounts['daisy'] = newRewardCounts['daisy']! + 1;
-        }
-      }
-
-      // =========================
-      // AMBIL BUNGA YANG SUDAH
-      // DITANAM
-      // =========================
-
-      final gardenData = await supabase
-          .from('garden_flowers')
-          .select()
-          .eq('user_id', user.id)
+          .eq('reward_type', 'flower')
           .order('created_at', ascending: true);
 
-      final loadedFlowers = List<Map<String, dynamic>>.from(gardenData);
-
       if (!mounted) return;
 
+      final List<Map<String, dynamic>> loadedFlowers = [];
+
+      for (int i = 0; i < response.length; i++) {
+        final flower = flowers[i % flowers.length];
+
+        loadedFlowers.add({
+          'id': response[i]['id'].toString(),
+          'flowerId': flower['id'],
+          'name': flower['name'],
+          'emoji': flower['emoji'],
+          'x': _defaultX(i),
+          'y': _defaultY(i),
+        });
+      }
+
       setState(() {
-        rewardCounts = newRewardCounts;
-        placedFlowers = loadedFlowers;
+        flowerCount = response.length;
+        plantedFlowers
+          ..clear()
+          ..addAll(loadedFlowers);
+
         isLoading = false;
       });
     } catch (e) {
-      debugPrint('ERROR LOAD GARDEN: $e');
-
       if (!mounted) return;
 
       setState(() {
         isLoading = false;
       });
-
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Gagal memuat Garden: $e')));
     }
   }
 
-  // =========================
-  // HITUNG STOK TERSEDIA
-  // =========================
+  // ============================================================
+  // DEFAULT POSITION BUNGA
+  // ============================================================
 
-  int getAvailableStock(String flowerType) {
-    final totalReward = rewardCounts[flowerType] ?? 0;
+  double _defaultX(int index) {
+    const positions = [0.18, 0.39, 0.60, 0.82, 0.28, 0.50, 0.72, 0.10];
 
-    final plantedCount = placedFlowers
-        .where((flower) => flower['flower_type'] == flowerType)
+    return positions[index % positions.length];
+  }
+
+  double _defaultY(int index) {
+    const positions = [0.70, 0.56, 0.70, 0.57, 0.46, 0.76, 0.46, 0.58];
+
+    return positions[index % positions.length];
+  }
+
+  // ============================================================
+  // COUNT PER FLOWER
+  // ============================================================
+
+  int _getFlowerTypeCount(String flowerId) {
+    return plantedFlowers
+        .where((flower) => flower['flowerId'] == flowerId)
         .length;
-
-    final stock = totalReward - plantedCount;
-
-    return stock < 0 ? 0 : stock;
   }
 
-  // =========================
-  // TAMBAH BUNGA
-  // =========================
+  // ============================================================
+  // TANAM BUNGA
+  // ============================================================
 
-  Future<void> addFlower(
-    String flowerType,
-    double gardenWidth,
-    double gardenHeight,
-  ) async {
-    final user = supabase.auth.currentUser;
-
-    if (user == null) {
-      showMessage('Kamu belum login.');
-      return;
-    }
-
-    final stock = getAvailableStock(flowerType);
-
-    if (stock <= 0) {
-      showEmptyFlowerDialog(flowerData[flowerType]?['name'] ?? 'Bunga');
-      return;
-    }
-
-    const flowerSize = 58.0;
-
-    // =========================
-    // POSISI AWAL DI TENGAH
-    // =========================
-
-    final xPosition = ((gardenWidth - flowerSize) / 2).clamp(0.0, gardenWidth);
-
-    final yPosition = ((gardenHeight - flowerSize) / 2).clamp(
-      0.0,
-      gardenHeight,
-    );
-
-    try {
-      final inserted = await supabase
-          .from('garden_flowers')
-          .insert({
-            'user_id': user.id,
-            'flower_type': flowerType,
-            'x_position': xPosition,
-            'y_position': yPosition,
-          })
-          .select()
-          .single();
-
-      if (!mounted) return;
-
-      setState(() {
-        placedFlowers.add(Map<String, dynamic>.from(inserted));
-      });
-    } catch (e) {
-      debugPrint('ERROR ADD FLOWER: $e');
-
-      showMessage('Gagal menanam bunga.');
-    }
-  }
-
-  // =========================
-  // UPDATE POSISI BUNGA
-  // =========================
-
-  Future<void> updateFlowerPosition(int index, double newX, double newY) async {
-    if (index < 0 || index >= placedFlowers.length) {
-      return;
-    }
-
-    final flower = placedFlowers[index];
-
-    final flowerId = flower['id'];
-
-    try {
-      await supabase
-          .from('garden_flowers')
-          .update({'x_position': newX, 'y_position': newY})
-          .eq('id', flowerId);
-    } catch (e) {
-      debugPrint('ERROR UPDATE FLOWER POSITION: $e');
-    }
-  }
-
-  // =========================
-  // DRAG BUNGA
-  // =========================
-
-  void updateFlowerDrag(
-    int index,
-    DragUpdateDetails details,
-    double gardenWidth,
-    double gardenHeight,
-  ) {
-    if (index < 0 || index >= placedFlowers.length) {
-      return;
-    }
-
-    const flowerSize = 58.0;
-
-    final flower = placedFlowers[index];
-
-    final currentX = (flower['x_position'] as num?)?.toDouble() ?? 0.0;
-
-    final currentY = (flower['y_position'] as num?)?.toDouble() ?? 0.0;
-
-    double newX = currentX + details.delta.dx;
-
-    double newY = currentY + details.delta.dy;
-
-    final maxX = gardenWidth - flowerSize;
-
-    final maxY = gardenHeight - flowerSize;
-
-    newX = newX.clamp(0.0, maxX < 0 ? 0.0 : maxX);
-
-    newY = newY.clamp(0.0, maxY < 0 ? 0.0 : maxY);
+  void _plantFlower(String flowerId, {double? x, double? y}) {
+    final flower = flowers.firstWhere((item) => item['id'] == flowerId);
 
     setState(() {
-      placedFlowers[index]['x_position'] = newX;
-
-      placedFlowers[index]['y_position'] = newY;
+      plantedFlowers.add({
+        'id': DateTime.now().microsecondsSinceEpoch.toString(),
+        'flowerId': flower['id'],
+        'name': flower['name'],
+        'emoji': flower['emoji'],
+        'x': (x ?? 0.50).clamp(0.08, 0.92),
+        'y': (y ?? 0.70).clamp(0.50, 0.88),
+      });
     });
-
-    // Simpan ke database
-    updateFlowerPosition(index, newX, newY);
   }
 
-  // =========================
-  // POPUP BUNGA HABIS
-  // =========================
+  // ============================================================
+  // PINDAH BUNGA
+  // ============================================================
 
-  void showEmptyFlowerDialog(String flowerName) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
-          title: const Text(
-            '🌱 Bunga Sudah Habis',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontWeight: FontWeight.w900,
-              color: Color(0xFF1B3B6F),
-            ),
-          ),
-          content: Text(
-            'Bunga $flowerName kamu sudah habis.\n\n'
-            'Selesaikan cerita dan quiz untuk mendapatkan bunga lagi! 🌸',
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF66809F),
-            ),
-          ),
-          actions: [
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFFC928),
-                  foregroundColor: const Color(0xFF1B3B6F),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
+  void _moveFlower(int index, double x, double y) {
+    if (index < 0 || index >= plantedFlowers.length) return;
+
+    setState(() {
+      plantedFlowers[index]['x'] = x.clamp(0.06, 0.94);
+
+      plantedFlowers[index]['y'] = y.clamp(0.48, 0.90);
+    });
+  }
+
+  // ============================================================
+  // BACK
+  // ============================================================
+
+  void _goBack() {
+    if (Navigator.canPop(context)) {
+      Navigator.pop(context);
+    }
+  }
+
+  // ============================================================
+  // MAIN BUILD
+  // ============================================================
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFFFFCF4),
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final bool landscape = constraints.maxWidth > constraints.maxHeight;
+
+            return Column(
+              children: [
+                _buildHeader(landscape: landscape),
+
+                Expanded(
+                  child: isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : SingleChildScrollView(
+                          physics: const BouncingScrollPhysics(),
+                          padding: EdgeInsets.fromLTRB(
+                            landscape ? 24 : 14,
+                            4,
+                            landscape ? 24 : 14,
+                            20,
+                          ),
+                          child: Column(
+                            children: [
+                              _buildGarden(landscape: landscape),
+
+                              const SizedBox(height: 14),
+
+                              _buildFlowerSelector(landscape: landscape),
+                            ],
+                          ),
+                        ),
                 ),
-                onPressed: () {
-                  Navigator.pop(context);
-                },
-                child: const Text(
-                  'Oke, Siap! ✨',
-                  style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  // ============================================================
+  // HEADER
+  // ============================================================
+
+  Widget _buildHeader({required bool landscape}) {
+    final double titleSize = landscape ? 27 : 25;
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        landscape ? 24 : 14,
+        landscape ? 6 : 8,
+        landscape ? 24 : 14,
+        5,
+      ),
+      child: Row(
+        children: [
+          // BACK
+          Material(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            child: InkWell(
+              onTap: _goBack,
+              borderRadius: BorderRadius.circular(18),
+              child: SizedBox(
+                width: landscape ? 52 : 48,
+                height: landscape ? 52 : 48,
+                child: const Icon(
+                  Icons.arrow_back_rounded,
+                  color: Color(0xFF173C70),
+                  size: 30,
                 ),
               ),
             ),
-          ],
+          ),
+
+          const SizedBox(width: 12),
+
+          // TITLE
+          Expanded(
+            child: Row(
+              children: [
+                Flexible(
+                  child: Text(
+                    'Taman Emosi',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: titleSize,
+                      fontWeight: FontWeight.w900,
+                      color: const Color(0xFF173C70),
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Text('🌻', style: TextStyle(fontSize: landscape ? 27 : 25)),
+              ],
+            ),
+          ),
+
+          // JUMLAH BUNGA
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEAF8E7),
+              borderRadius: BorderRadius.circular(25),
+              border: Border.all(color: const Color(0xFFB8DFAE), width: 2),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('🌸', style: TextStyle(fontSize: 19)),
+                const SizedBox(width: 4),
+                Text(
+                  '$flowerCount',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF2B6838),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ============================================================
+  // GARDEN
+  // ============================================================
+
+  Widget _buildGarden({required bool landscape}) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Lebih tinggi di landscape supaya taman terasa luas.
+        final double gardenHeight = landscape ? 345 : 405;
+
+        return Container(
+          height: gardenHeight,
+          width: double.infinity,
+          clipBehavior: Clip.hardEdge,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(30),
+            border: Border.all(color: Colors.white, width: 6),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.09),
+                blurRadius: 14,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Stack(
+            clipBehavior: Clip.hardEdge,
+            children: [
+              // ==================================================
+              // LANGIT
+              // ==================================================
+
+              Positioned.fill(
+                child: Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [Color(0xFF70D7F5), Color(0xFFDFF7E8)],
+                    ),
+                  ),
+                ),
+              ),
+
+              // ==================================================
+              // MATAHARI
+              // ==================================================
+              Positioned(
+                top: 18,
+                right: 28,
+                child: Text(
+                  '☀️',
+                  style: TextStyle(fontSize: landscape ? 58 : 54),
+                ),
+              ),
+
+              // ==================================================
+              // AWAN
+              // ==================================================
+              const Positioned(
+                left: 25,
+                top: 22,
+                child: Text('☁️', style: TextStyle(fontSize: 45)),
+              ),
+
+              const Positioned(
+                left: 190,
+                top: 42,
+                child: Text('☁️', style: TextStyle(fontSize: 35)),
+              ),
+
+              // ==================================================
+              // PELANGI
+              // ==================================================
+              Positioned(
+                left: landscape ? 85 : 45,
+                top: 62,
+                child: Text(
+                  '🌈',
+                  style: TextStyle(fontSize: landscape ? 82 : 75),
+                ),
+              ),
+
+              // ==================================================
+              // KUPU-KUPU
+              // ==================================================
+              const Positioned(
+                left: 330,
+                top: 82,
+                child: Text('🦋', style: TextStyle(fontSize: 25)),
+              ),
+
+              const Positioned(
+                right: 125,
+                top: 115,
+                child: Text('🦋', style: TextStyle(fontSize: 22)),
+              ),
+
+              // ==================================================
+              // BUKIT
+              // ==================================================
+              Positioned(
+                left: -70,
+                right: -70,
+                top: 155,
+                height: 105,
+                child: Container(
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF9DD867),
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(100),
+                      topRight: Radius.circular(100),
+                    ),
+                  ),
+                ),
+              ),
+
+              // ==================================================
+              // RUMPUT
+              // ==================================================
+              Positioned(
+                left: 0,
+                right: 0,
+                top: 218,
+                height: 53,
+                child: Container(
+                  color: const Color(0xFF4DB83F),
+                  child: const Align(
+                    alignment: Alignment.topCenter,
+                    child: Text(
+                      '🌿   🌱   🌿   🌱   🌿',
+                      style: TextStyle(fontSize: 18),
+                    ),
+                  ),
+                ),
+              ),
+
+              // ==================================================
+              // TANAH
+              // ==================================================
+              Positioned(
+                left: 0,
+                right: 0,
+                top: 266,
+                bottom: 0,
+                child: Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [Color(0xFFAA6C3D), Color(0xFF8C542D)],
+                    ),
+                  ),
+                ),
+              ),
+
+              // ==================================================
+              // BATU KIRI
+              // ==================================================
+              const Positioned(
+                left: 28,
+                bottom: 27,
+                child: Text('🪨', style: TextStyle(fontSize: 32)),
+              ),
+
+              // ==================================================
+              // BATU KANAN
+              // ==================================================
+              const Positioned(
+                right: 25,
+                bottom: 27,
+                child: Text('🪨', style: TextStyle(fontSize: 32)),
+              ),
+
+              // ==================================================
+              // PAPAN TAMAN
+              // ==================================================
+              Positioned(
+                right: 22,
+                top: 145,
+                child: Transform.rotate(
+                  angle: 0.02,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 7,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFB97A42),
+                      borderRadius: BorderRadius.circular(7),
+                      border: Border.all(
+                        color: const Color(0xFF8A542C),
+                        width: 2,
+                      ),
+                    ),
+                    child: const Text(
+                      'Tamanmu\nKeren! 💗',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              // ==================================================
+              // PESAN KECIL
+              // ==================================================
+              if (plantedFlowers.isEmpty)
+                _buildSimpleGardenMessage(landscape: landscape),
+
+              // ==================================================
+              // BUNGA YANG SUDAH DITANAM
+              // ==================================================
+              ...plantedFlowers.asMap().entries.map((entry) {
+                return _buildPlacedFlower(
+                  index: entry.key,
+                  flower: entry.value,
+                  gardenWidth: constraints.maxWidth,
+                  gardenHeight: gardenHeight,
+                  landscape: landscape,
+                );
+              }),
+            ],
+          ),
         );
       },
     );
   }
 
-  // =========================
-  // MESSAGE
-  // =========================
+  // ============================================================
+  // PESAN TAMAN KOSONG
+  // ============================================================
 
-  void showMessage(String message) {
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
-  }
-
-  // =========================
-  // TOMBOL BUNGA
-  // =========================
-
-  Widget flowerButton({
-    required String flowerType,
-    required double width,
-    required double height,
-    required bool compact,
-  }) {
-    final data = flowerData[flowerType]!;
-
-    final stock = getAvailableStock(flowerType);
-
-    return Expanded(
-      child: GestureDetector(
-        onTap: () {
-          addFlower(flowerType, width, height);
-        },
+  Widget _buildSimpleGardenMessage({required bool landscape}) {
+    return Positioned(
+      top: landscape ? 105 : 125,
+      left: 0,
+      right: 0,
+      child: Center(
         child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 4),
-          padding: EdgeInsets.symmetric(vertical: compact ? 6 : 12),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color(0xFFDCE8F5), width: 2),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
+            color: Colors.white.withValues(alpha: 0.88),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: const Color(0xFFD7EBD0), width: 1.5),
           ),
-          child: Column(
+          child: const Row(
             mainAxisSize: MainAxisSize.min,
             children: [
+              Text('🌱', style: TextStyle(fontSize: 20)),
+              SizedBox(width: 6),
               Text(
-                data['emoji']!,
-                style: TextStyle(fontSize: compact ? 25 : 32),
-              ),
-
-              SizedBox(height: compact ? 2 : 4),
-
-              Text(
-                data['name']!,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
+                'Pilih bunga di bawah untuk menanam',
+                style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w800,
-                  color: Color(0xFF1B3B6F),
-                ),
-              ),
-
-              SizedBox(height: compact ? 3 : 6),
-
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: stock == 0 ? Colors.red.shade50 : Colors.green.shade50,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  '×$stock',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w900,
-                    color: stock == 0 ? Colors.red : Colors.green.shade700,
-                  ),
+                  color: Color(0xFF315B42),
                 ),
               ),
             ],
@@ -435,402 +590,244 @@ class _GardenPageState extends State<GardenPage> {
     );
   }
 
-  // =========================
-  // BUILD
-  // =========================
+  // ============================================================
+  // BUNGA DI TAMAN
+  // ============================================================
 
-  @override
-  Widget build(BuildContext context) {
-    if (isLoading) {
-      return const Scaffold(
-        backgroundColor: Color(0xFFFFFDF5),
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
+  Widget _buildPlacedFlower({
+    required int index,
+    required Map<String, dynamic> flower,
+    required double gardenWidth,
+    required double gardenHeight,
+    required bool landscape,
+  }) {
+    final double x = (flower['x'] as num).toDouble();
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFFFFDF5),
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, pageConstraints) {
-            final compact =
-                pageConstraints.maxWidth < 600 ||
-                pageConstraints.maxHeight < 500;
+    final double y = (flower['y'] as num).toDouble();
 
-            return Column(
-              children: [
-                // =========================
-                // HEADER
-                // =========================
-                Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    compact ? 12 : 20,
-                    compact ? 8 : 16,
-                    compact ? 12 : 20,
-                    compact ? 8 : 12,
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: compact ? 42 : 52,
-                        height: compact ? 42 : 52,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: const Color(0xFFDCE8F5),
-                            width: 1.5,
-                          ),
-                        ),
-                        child: IconButton(
-                          onPressed: () {
-                            Navigator.pop(context);
-                          },
-                          icon: const Icon(
-                            Icons.arrow_back_rounded,
-                            color: Color(0xFF1B3B6F),
-                          ),
-                        ),
-                      ),
+    final double flowerSize = landscape ? 54 : 52;
 
-                      const SizedBox(width: 12),
+    // Posisi berdasarkan ukuran TAMAN,
+    // bukan ukuran layar HP.
+    final double left = (x * gardenWidth) - (flowerSize / 2);
 
-                      Expanded(
-                        child: Text(
-                          'Taman Emosi 🌻',
-                          style: TextStyle(
-                            fontSize: compact ? 20 : 24,
-                            fontWeight: FontWeight.w900,
-                            color: Color(0xFF1B3B6F),
-                          ),
-                        ),
-                      ),
+    final double top = (y * gardenHeight) - (flowerSize / 2);
 
-                      Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: compact ? 10 : 14,
-                          vertical: compact ? 6 : 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.green.shade50,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: Colors.green.shade200,
-                            width: 1.5,
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text('🌱', style: TextStyle(fontSize: 16)),
-                            SizedBox(width: 6),
-                            Text(
-                              'Garden',
-                              style: TextStyle(
-                                fontSize: compact ? 12 : null,
-                                fontWeight: FontWeight.w900,
-                                color: Color(0xFF2D6A4F),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+    return Positioned(
+      left: left.clamp(4.0, gardenWidth - flowerSize - 4),
+      top: top.clamp(265.0, gardenHeight - flowerSize - 3),
+      child: GestureDetector(
+        onPanUpdate: (details) {
+          final RenderBox? renderBox = context.findRenderObject() as RenderBox?;
 
-                // =========================
-                // AREA GARDEN
-                // =========================
-                Expanded(
-                  child: Container(
-                    width: double.infinity,
-                    margin: EdgeInsets.symmetric(horizontal: compact ? 12 : 16),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(28),
-                      border: Border.all(color: Colors.white, width: 3),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.05),
-                          blurRadius: 15,
-                          offset: const Offset(0, 6),
-                        ),
-                      ],
-                      gradient: const LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Color(0xFFB3E5FC), // Langit cerah
-                          Color(0xFFC8E6C9), // Hijau rumput lembut
-                          Color(0xFFA5D6A7), // Hijau subur
-                        ],
-                        stops: [0.0, 0.35, 1.0],
-                      ),
-                    ),
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        return Stack(
-                          children: [
-                            // =========================
-                            // LANGIT (Matahari & Awan Lucu)
-                            // =========================
-                            const Positioned(
-                              top: 20,
-                              right: 24,
-                              child: Text('☀️', style: TextStyle(fontSize: 44)),
-                            ),
+          if (renderBox == null) return;
 
-                            const Positioned(
-                              top: 35,
-                              left: 25,
-                              child: Text('☁️', style: TextStyle(fontSize: 40)),
-                            ),
+          final Offset local = renderBox.globalToLocal(details.globalPosition);
 
-                            const Positioned(
-                              top: 90,
-                              right: 90,
-                              child: Text('☁️', style: TextStyle(fontSize: 30)),
-                            ),
+          final double newX = local.dx / gardenWidth;
 
-                            // =========================
-                            // TANAH
-                            // =========================
-                            Positioned(
-                              left: 0,
-                              right: 0,
-                              bottom: 0,
-                              child: Container(
-                                height: 95,
-                                decoration: BoxDecoration(
-                                  color: const Color(
-                                    0xFFD7CCC8,
-                                  ), // Coklat tanah lembut
-                                  borderRadius: const BorderRadius.only(
-                                    bottomLeft: Radius.circular(25),
-                                    bottomRight: Radius.circular(25),
-                                  ),
-                                  border: Border(
-                                    top: BorderSide(
-                                      color: Color(0xFFBCAAA4),
-                                      width: 2,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
+          final double newY = local.dy / gardenHeight;
 
-                            // =========================
-                            // RUMPUT
-                            // =========================
-                            Positioned(
-                              left: 0,
-                              right: 0,
-                              bottom: 82,
-                              child: Container(
-                                height: 18,
-                                decoration: const BoxDecoration(
-                                  color: Color(0xFF72B95D),
-                                  borderRadius: BorderRadius.vertical(
-                                    top: Radius.circular(18),
-                                  ),
-                                ),
-                              ),
-                            ),
+          _moveFlower(index, newX, newY);
+        },
+        child: SizedBox(
+          width: flowerSize,
+          height: flowerSize + 10,
+          child: Text(
+            flower['emoji'] as String,
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: landscape ? 49 : 47),
+          ),
+        ),
+      ),
+    );
+  }
 
-                            const Positioned(
-                              left: 20,
-                              bottom: 82,
-                              child: Text(
-                                '🌿  🌱  🌿  🌱  🌿  🌱  🌿',
-                                style: TextStyle(fontSize: 20),
-                              ),
-                            ),
+  // ============================================================
+  // PILIHAN BUNGA
+  // ============================================================
 
-                            const Positioned(
-                              right: 18,
-                              bottom: 82,
-                              child: Text(
-                                '🌱  🌿  🌱  🌿',
-                                style: TextStyle(fontSize: 20),
-                              ),
-                            ),
+  Widget _buildFlowerSelector({required bool landscape}) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // HP portrait = 2 x 2
+        if (!landscape && constraints.maxWidth < 650) {
+          return Column(
+            children: [
+              Row(
+                children: [
+                  Expanded(child: _buildFlowerCard(flowers[0])),
+                  const SizedBox(width: 10),
+                  Expanded(child: _buildFlowerCard(flowers[1])),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(child: _buildFlowerCard(flowers[2])),
+                  const SizedBox(width: 10),
+                  Expanded(child: _buildFlowerCard(flowers[3])),
+                ],
+              ),
+            ],
+          );
+        }
 
-                            const Positioned(
-                              left: 115,
-                              bottom: 105,
-                              child: Text(
-                                '🌾  🌾  🌾',
-                                style: TextStyle(fontSize: 18),
-                              ),
-                            ),
-
-                            // =========================
-                            // BATU
-                            // =========================
-                            const Positioned(
-                              left: 35,
-                              bottom: 30,
-                              child: Text('🪨', style: TextStyle(fontSize: 32)),
-                            ),
-
-                            const Positioned(
-                              right: 35,
-                              bottom: 45,
-                              child: Text('🪨', style: TextStyle(fontSize: 26)),
-                            ),
-
-                            // =========================
-                            // BUNGA
-                            // =========================
-                            ...placedFlowers.asMap().entries.map((entry) {
-                              final index = entry.key;
-
-                              final flower = entry.value;
-
-                              final flowerType = flower['flower_type']
-                                  ?.toString();
-
-                              final data = flowerData[flowerType];
-
-                              if (data == null) {
-                                return const SizedBox();
-                              }
-
-                              final x =
-                                  (flower['x_position'] as num?)?.toDouble() ??
-                                  0.0;
-
-                              final y =
-                                  (flower['y_position'] as num?)?.toDouble() ??
-                                  0.0;
-
-                              final isDragging = draggingFlowerIndex == index;
-
-                              return Positioned(
-                                left: x,
-                                top: y,
-                                child: GestureDetector(
-                                  onPanStart: (details) {
-                                    setState(() {
-                                      draggingFlowerIndex = index;
-                                    });
-                                  },
-                                  onPanUpdate: (details) {
-                                    updateFlowerDrag(
-                                      index,
-                                      details,
-                                      constraints.maxWidth,
-                                      constraints.maxHeight,
-                                    );
-                                  },
-                                  onPanEnd: (details) {
-                                    setState(() {
-                                      draggingFlowerIndex = null;
-                                    });
-                                  },
-                                  child: AnimatedScale(
-                                    scale: isDragging ? 1.12 : 1.0,
-                                    duration: const Duration(milliseconds: 100),
-                                    child: Text(
-                                      data['emoji']!,
-                                      style: const TextStyle(fontSize: 58),
-                                    ),
-                                  ),
-                                ),
-                              );
-                            }),
-
-                            // =========================
-                            // GARDEN KOSONG
-                            // =========================
-                            if (placedFlowers.isEmpty)
-                              Center(
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Text(
-                                      '🪴',
-                                      style: TextStyle(fontSize: 60),
-                                    ),
-                                    const SizedBox(height: 12),
-                                    const Text(
-                                      'Tamannya masih kosong nih!',
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.w900,
-                                        color: Color(0xFF1B3B6F),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 6),
-                                    const Text(
-                                      'Yuk pilih bunga di bawah\n'
-                                      'untuk menghias taman indahmu! ✨',
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w700,
-                                        color: Color(0xFF4A6572),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                          ],
-                        );
-                      },
-                    ),
-                  ),
-                ),
-
-                // =========================
-                // TOMBOL BUNGA
-                // =========================
-                SizedBox(
-                  height: compact ? 98 : 150,
-                  child: Padding(
-                    padding: EdgeInsets.fromLTRB(
-                      compact ? 8 : 16,
-                      compact ? 5 : 8,
-                      compact ? 8 : 16,
-                      compact ? 6 : 10,
-                    ),
-                    child: Row(
-                      children: [
-                        flowerButton(
-                          flowerType: 'sunflower',
-                          width: MediaQuery.of(context).size.width,
-                          height: MediaQuery.of(context).size.height,
-                          compact: compact,
-                        ),
-
-                        flowerButton(
-                          flowerType: 'tulip',
-                          width: MediaQuery.of(context).size.width,
-                          height: MediaQuery.of(context).size.height,
-                          compact: compact,
-                        ),
-
-                        flowerButton(
-                          flowerType: 'rose',
-                          width: MediaQuery.of(context).size.width,
-                          height: MediaQuery.of(context).size.height,
-                          compact: compact,
-                        ),
-
-                        flowerButton(
-                          flowerType: 'daisy',
-                          width: MediaQuery.of(context).size.width,
-                          height: MediaQuery.of(context).size.height,
-                          compact: compact,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+        // Landscape = 4 kartu sejajar
+        return Row(
+          children: flowers.map((flower) {
+            return Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: _buildFlowerCard(flower),
+              ),
             );
-          },
+          }).toList(),
+        );
+      },
+    );
+  }
+
+  // ============================================================
+  // KARTU BUNGA
+  // ============================================================
+
+  Widget _buildFlowerCard(Map<String, dynamic> flower) {
+    final String flowerId = flower['id'] as String;
+
+    final String name = flower['name'] as String;
+
+    final String emoji = flower['emoji'] as String;
+
+    final int count = _getFlowerTypeCount(flowerId);
+
+    return GestureDetector(
+      onTap: () {
+        _plantFlower(flowerId);
+      },
+      child: Container(
+        height: 132,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: const Color(0xFFE4E4E4), width: 2),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.055),
+              blurRadius: 9,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Stack(
+          children: [
+            // ==================================================
+            // JUMLAH
+            // ==================================================
+
+            Positioned(
+              top: 8,
+              right: 8,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: count > 0
+                      ? const Color(0xFFE8F8E4)
+                      : const Color(0xFFFFEEEE),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: count > 0
+                        ? const Color(0xFFB9DEB3)
+                        : const Color(0xFFFFC8C8),
+                  ),
+                ),
+                child: Text(
+                  '×$count',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                    color: count > 0
+                        ? const Color(0xFF37713D)
+                        : const Color(0xFFE45D5D),
+                  ),
+                ),
+              ),
+            ),
+
+            // ==================================================
+            // ISI KARTU
+            // ==================================================
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.only(
+                  top: 7,
+                  left: 7,
+                  right: 7,
+                  bottom: 5,
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // BUNGA
+                    Draggable<Map<String, dynamic>>(
+                      data: flower,
+                      feedback: Material(
+                        color: Colors.transparent,
+                        child: Text(
+                          emoji,
+                          style: const TextStyle(fontSize: 54),
+                        ),
+                      ),
+                      childWhenDragging: Opacity(
+                        opacity: 0.25,
+                        child: Text(
+                          emoji,
+                          style: const TextStyle(fontSize: 42),
+                        ),
+                      ),
+                      child: Text(emoji, style: const TextStyle(fontSize: 43)),
+                    ),
+
+                    const SizedBox(height: 1),
+
+                    // NAMA
+                    Text(
+                      name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF173C70),
+                      ),
+                    ),
+
+                    const SizedBox(height: 4),
+
+                    // TOMBOL TANAM
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 15,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE4F6C8),
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                      child: const Text(
+                        '🌱 Tanam',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF397329),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

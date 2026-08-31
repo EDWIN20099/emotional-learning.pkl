@@ -28,25 +28,35 @@ class _StoryLevelPageState extends State<StoryLevelPage> {
     _loadStories();
   }
 
-  // =========================
-  // LOAD / RELOAD CERITA
-  // =========================
+  // ============================================================
+  // LOAD CERITA
+  // ============================================================
 
   void _loadStories() {
     _stories = _storyService.getStoriesByEmotion(widget.emotionId);
   }
 
+  // ============================================================
+  // REFRESH CERITA
+  // ============================================================
+
   Future<void> refreshStories() async {
+    if (!mounted) return;
+
     setState(() {
       _loadStories();
     });
 
-    await _stories;
+    try {
+      await _stories;
+    } catch (_) {
+      // Error akan ditampilkan oleh FutureBuilder.
+    }
   }
 
-  // =========================
+  // ============================================================
   // ICON EMOSI
-  // =========================
+  // ============================================================
 
   IconData getEmotionIcon() {
     switch (widget.emotionName.toLowerCase()) {
@@ -67,9 +77,9 @@ class _StoryLevelPageState extends State<StoryLevelPage> {
     }
   }
 
-  // =========================
+  // ============================================================
   // WARNA EMOSI
-  // =========================
+  // ============================================================
 
   Color getEmotionColor() {
     switch (widget.emotionName.toLowerCase()) {
@@ -90,9 +100,9 @@ class _StoryLevelPageState extends State<StoryLevelPage> {
     }
   }
 
-  // =========================
-  // URUTAN CERITA
-  // =========================
+  // ============================================================
+  // URUTKAN CERITA
+  // ============================================================
 
   List<Map<String, dynamic>> sortStories(List<Map<String, dynamic>> stories) {
     final sortedStories = List<Map<String, dynamic>>.from(stories);
@@ -112,57 +122,76 @@ class _StoryLevelPageState extends State<StoryLevelPage> {
     return sortedStories.take(5).toList();
   }
 
-  // =========================
+  // ============================================================
   // BUKA CERITA
-  // =========================
+  // ============================================================
 
   Future<void> openStory(Map<String, dynamic> story) async {
-    await Navigator.push(
+    final result = await Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => StoryReaderPage(story: story)),
     );
 
-    // Setelah kembali dari cerita / quiz,
-    // langsung ambil status unlock terbaru.
     if (!mounted) return;
 
-    await refreshStories();
-  }
+    // ==========================================================
+    // SETELAH CERITA / QUIZ SELESAI
+    // ==========================================================
+    //
+    // StoryReaderPage masuk ke Quiz.
+    // Setelah Quiz selesai dan mengembalikan true,
+    // kita langsung reload status unlock.
+    //
 
-  // =========================
-  // BUILD
-  // =========================
+    if (result == true) {
+      await refreshStories();
+    } else {
+      // Tetap refresh kalau user kembali secara normal.
+      await refreshStories();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final emotionColor = getEmotionColor();
 
     return Scaffold(
-      backgroundColor: const Color(
-        0xFFFFFDF5,
-      ), // Warna latar krem hangat khas TK
+      backgroundColor: const Color(0xFFFFFDF5),
 
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
+
         leading: Padding(
           padding: const EdgeInsets.all(8.0),
+
           child: Container(
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: const Color(0xFFDCE8F5), width: 1.5),
             ),
+
             child: IconButton(
               icon: const Icon(
                 Icons.arrow_back_rounded,
                 color: Color(0xFF1B3B6F),
                 size: 20,
               ),
-              onPressed: () => Navigator.pop(context),
+
+              onPressed: () async {
+                // Sebelum kembali, pastikan data terbaru
+                // sudah diambil.
+                await refreshStories();
+
+                if (!context.mounted) return;
+
+                Navigator.pop(context);
+              },
             ),
           ),
         ),
+
         title: const Text(
           'Pilih Cerita 📚',
           style: TextStyle(
@@ -177,9 +206,9 @@ class _StoryLevelPageState extends State<StoryLevelPage> {
         future: _stories,
 
         builder: (context, snapshot) {
-          // =========================
+          // ======================================================
           // LOADING
-          // =========================
+          // ======================================================
 
           if (snapshot.connectionState == ConnectionState.waiting) {
             return Center(
@@ -187,16 +216,18 @@ class _StoryLevelPageState extends State<StoryLevelPage> {
             );
           }
 
-          // =========================
+          // ======================================================
           // ERROR
-          // =========================
+          // ======================================================
 
           if (snapshot.hasError) {
             return Center(
               child: Padding(
                 padding: const EdgeInsets.all(24),
+
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
+
                   children: [
                     const Text('😿', style: TextStyle(fontSize: 50)),
 
@@ -213,10 +244,10 @@ class _StoryLevelPageState extends State<StoryLevelPage> {
 
                     const SizedBox(height: 8),
 
-                    Text(
-                      '${snapshot.error}',
+                    const Text(
+                      'Coba muat ulang halaman.',
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.w700,
                         color: Color(0xFF8A9DBF),
                       ),
@@ -225,15 +256,18 @@ class _StoryLevelPageState extends State<StoryLevelPage> {
                     const SizedBox(height: 20),
 
                     ElevatedButton(
+                      onPressed: refreshStories,
+
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFFFC928),
                         foregroundColor: const Color(0xFF1B3B6F),
                         elevation: 0,
+
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
                       ),
-                      onPressed: refreshStories,
+
                       child: const Text(
                         'Coba Lagi 🚀',
                         style: TextStyle(fontWeight: FontWeight.w900),
@@ -245,24 +279,29 @@ class _StoryLevelPageState extends State<StoryLevelPage> {
             );
           }
 
-          // =========================
-          // DATA CERITA
-          // =========================
+          // ======================================================
+          // DATA
+          // ======================================================
 
           final stories = sortStories(snapshot.data ?? []);
 
           if (stories.isEmpty) {
             return const Center(
               child: Padding(
-                padding: EdgeInsets.all(24.0),
+                padding: EdgeInsets.all(24),
+
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
+
                   children: [
                     Text('🌱', style: TextStyle(fontSize: 50)),
+
                     SizedBox(height: 12),
+
                     Text(
                       'Belum ada cerita untuk emosi ini.',
                       textAlign: TextAlign.center,
+
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w900,
@@ -275,9 +314,9 @@ class _StoryLevelPageState extends State<StoryLevelPage> {
             );
           }
 
-          // =========================
+          // ======================================================
           // HALAMAN
-          // =========================
+          // ======================================================
 
           return RefreshIndicator(
             onRefresh: refreshStories,
@@ -289,15 +328,18 @@ class _StoryLevelPageState extends State<StoryLevelPage> {
               padding: const EdgeInsets.fromLTRB(20, 10, 20, 32),
 
               children: [
-                // =========================
+                // ==================================================
                 // HEADER
-                // =========================
+                // ==================================================
+
                 Container(
                   padding: const EdgeInsets.all(20),
 
                   decoration: BoxDecoration(
                     color: emotionColor.withValues(alpha: 0.15),
+
                     borderRadius: BorderRadius.circular(28),
+
                     border: Border.all(
                       color: emotionColor.withValues(alpha: 0.3),
                       width: 2,
@@ -313,6 +355,7 @@ class _StoryLevelPageState extends State<StoryLevelPage> {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           shape: BoxShape.circle,
+
                           boxShadow: [
                             BoxShadow(
                               color: emotionColor.withValues(alpha: 0.2),
@@ -350,6 +393,7 @@ class _StoryLevelPageState extends State<StoryLevelPage> {
 
                             const Text(
                               'Pilih tahap cerita ✨',
+
                               style: TextStyle(
                                 fontSize: 22,
                                 fontWeight: FontWeight.w900,
@@ -365,9 +409,9 @@ class _StoryLevelPageState extends State<StoryLevelPage> {
 
                 const SizedBox(height: 24),
 
-                // =========================
+                // ==================================================
                 // 5 TAHAP
-                // =========================
+                // ==================================================
                 ...List.generate(5, (index) {
                   final hasStory = index < stories.length;
 
@@ -377,8 +421,7 @@ class _StoryLevelPageState extends State<StoryLevelPage> {
                       ? story['title']?.toString() ?? 'Cerita'
                       : 'Cerita berikutnya';
 
-                  // PENTING:
-                  // Ambil status unlock dari StoryService
+                  // Status unlock dari StoryService
                   final isUnlocked = hasStory && story['is_unlocked'] == true;
 
                   return Padding(
@@ -402,9 +445,9 @@ class _StoryLevelPageState extends State<StoryLevelPage> {
     );
   }
 
-  // =========================
+  // ============================================================
   // LEVEL CARD
-  // =========================
+  // ============================================================
 
   Widget _levelCard({
     required int level,
@@ -420,7 +463,6 @@ class _StoryLevelPageState extends State<StoryLevelPage> {
 
       child: InkWell(
         onTap: onTap,
-
         borderRadius: BorderRadius.circular(24),
 
         child: Container(
@@ -433,8 +475,10 @@ class _StoryLevelPageState extends State<StoryLevelPage> {
               color: isUnlocked
                   ? color.withValues(alpha: 0.35)
                   : const Color(0xFFDCE8F5),
+
               width: isUnlocked ? 2 : 1.5,
             ),
+
             boxShadow: isUnlocked
                 ? [
                     BoxShadow(
@@ -448,9 +492,10 @@ class _StoryLevelPageState extends State<StoryLevelPage> {
 
           child: Row(
             children: [
-              // =========================
+              // ==================================================
               // ICON
-              // =========================
+              // ==================================================
+
               Container(
                 width: 60,
                 height: 60,
@@ -474,9 +519,9 @@ class _StoryLevelPageState extends State<StoryLevelPage> {
 
               const SizedBox(width: 16),
 
-              // =========================
+              // ==================================================
               // TEXT
-              // =========================
+              // ==================================================
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -511,7 +556,7 @@ class _StoryLevelPageState extends State<StoryLevelPage> {
                     const SizedBox(height: 4),
 
                     Text(
-                      isUnlocked ? 'Tersedia ✨' : 'Terkunci 🔒',
+                      isUnlocked ? 'Ayo mulai! ✨' : 'Terkunci 🔒',
 
                       style: TextStyle(
                         fontSize: 12,
@@ -526,18 +571,21 @@ class _StoryLevelPageState extends State<StoryLevelPage> {
                 ),
               ),
 
-              // =========================
+              // ==================================================
               // ICON KANAN
-              // =========================
+              // ==================================================
               Container(
                 width: 38,
                 height: 38,
+
                 decoration: BoxDecoration(
                   color: isUnlocked
                       ? color.withValues(alpha: 0.15)
                       : const Color(0xFFDCE8F5).withValues(alpha: 0.5),
+
                   shape: BoxShape.circle,
                 ),
+
                 child: Icon(
                   isUnlocked
                       ? Icons.arrow_forward_rounded
